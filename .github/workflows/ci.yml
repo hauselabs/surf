@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @surfjs/core
+        run: pnpm --filter @surfjs/core build
+
+      - name: Typecheck @surfjs/core
+        run: pnpm --filter @surfjs/core typecheck
+
+      - name: Build @surfjs/client
+        run: pnpm --filter @surfjs/client build
+
+      - name: Typecheck @surfjs/client
+        run: pnpm --filter @surfjs/client typecheck
+
+      - name: Build @surfjs/devui
+        run: pnpm --filter @surfjs/devui build
+
+      - name: Typecheck all packages
+        run: pnpm turbo typecheck
+
+      - name: Run tests
+        run: pnpm test

@@ -1,0 +1,43 @@
+{
+  "name": "@surfjs/cli",
+  "version": "0.1.0",
+  "description": "CLI to inspect and test Surf-enabled websites",
+  "type": "module",
+  "bin": {
+    "surf": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@surfjs/client": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "surf",
+    "ai",
+    "agents",
+    "cli",
+    "inspector"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hauselabs/surf.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://surf.codes",
+  "bugs": {
+    "url": "https://github.com/hauselabs/surf/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,121 @@
+// ─── Main Entry Point ────────────────────────────────────────────────────────
+
+export { createSurf } from './surf.js';
+export type { SurfInstance } from './surf.js';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export type {
+  // Config
+  SurfConfig,
+  SurfManifest,
+  ManifestCommand,
+
+  // Commands
+  CommandDefinition,
+  CommandHandler,
+  CommandHints,
+  ExecutionContext,
+  CommandGroup,
+
+  // Parameters
+  ParamSchema,
+  ParamType,
+  TypeRef,
+  TypeDefinition,
+
+  // Auth
+  AuthConfig,
+  AuthType,
+
+  // Events
+  EventDefinition,
+
+  // Sessions
+  Session,
+  SessionStore,
+
+  // Transport
+  ExecuteRequest,
+  ExecuteResponse,
+  ErrorResponse,
+  SurfResponse,
+  HttpHandler,
+
+  // WebSocket messages
+  WsExecuteMessage,
+  WsResultMessage,
+  WsEventMessage,
+  WsAuthMessage,
+  WsSessionMessage,
+  WsIncomingMessage,
+  WsOutgoingMessage,
+
+  // Error codes
+  SurfErrorCode,
+
+  // Streaming
+  StreamChunk,
+
+  // Pipeline
+  PipelineStep,
+  PipelineRequest,
+  PipelineStepResult,
+  PipelineResponse,
+
+  // Rate limiting
+  RateLimitConfig,
+} from './types.js';
+
+// ─── Errors ──────────────────────────────────────────────────────────────────
+
+export {
+  SurfError,
+  unknownCommand,
+  invalidParams,
+  authRequired,
+  authFailed,
+  sessionExpired,
+  rateLimited,
+  internalError,
+  notSupported,
+} from './errors.js';
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
+export type { SurfMiddleware, MiddlewareContext } from './middleware.js';
+export { runMiddlewarePipeline } from './middleware.js';
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export type { AuthVerifier, AuthResult } from './auth.js';
+export { bearerVerifier, createAuthMiddleware } from './auth.js';
+
+// ─── Namespacing ──────────────────────────────────────────────────────────────
+
+export { flattenCommands, isCommandDefinition, group } from './namespace.js';
+
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+
+export { RateLimiter } from './ratelimit.js';
+
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+export { validateParams, validateResult } from './validation.js';
+
+// ─── Pipeline ─────────────────────────────────────────────────────────────────
+
+export { executePipeline } from './transport/pipeline.js';
+
+// ─── Framework Adapters ───────────────────────────────────────────────────
+
+export { fastifyPlugin } from './adapters/fastify.js';
+export { honoApp, honoMiddleware } from './adapters/hono.js';
+
+// ─── Internal utilities (for advanced use) ────────────────────────────────────
+
+export { CommandRegistry } from './commands.js';
+export { InMemorySessionStore } from './session.js';
+export { EventBus } from './events.js';
+export type { EventScope, ScopedEventDefinition } from './events.js';
+export { generateManifest } from './manifest.js';

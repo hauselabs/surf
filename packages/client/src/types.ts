@@ -1,0 +1,198 @@
+// ─── Manifest Types (mirrored from core for independence) ───────────────────
+
+export type ParamType = 'string' | 'number' | 'boolean' | 'object' | 'array';
+
+export interface ParamSchema {
+  type: ParamType;
+  required?: boolean;
+  default?: unknown;
+  description?: string;
+  enum?: readonly string[];
+  properties?: Record<string, ParamSchema>;
+  items?: ParamSchema | TypeRef;
+}
+
+export interface TypeRef {
+  $ref: string;
+}
+
+export interface CommandHints {
+  idempotent?: boolean;
+  sideEffects?: boolean;
+  estimatedMs?: number;
+}
+
+export interface ManifestCommand {
+  description: string;
+  params?: Record<string, ParamSchema>;
+  returns?: ParamSchema | TypeRef;
+  tags?: string[];
+  auth?: 'none' | 'required' | 'optional';
+  hints?: CommandHints;
+}
+
+export interface AuthConfig {
+  type: 'none' | 'bearer' | 'apiKey' | 'oauth2';
+  description?: string;
+}
+
+export interface EventDefinition {
+  description: string;
+  data?: Record<string, ParamSchema | TypeRef>;
+}
+
+export interface TypeDefinition {
+  type: ParamType;
+  properties?: Record<string, ParamSchema | TypeRef>;
+  items?: ParamSchema | TypeRef;
+  description?: string;
+}
+
+export interface SurfManifest {
+  surf: string;
+  name: string;
+  description?: string;
+  version?: string;
+  baseUrl?: string;
+  auth?: AuthConfig;
+  commands: Record<string, ManifestCommand>;
+  events?: Record<string, EventDefinition>;
+  types?: Record<string, TypeDefinition>;
+  /** Deterministic SHA-256 hash of the commands schema. */
+  checksum: string;
+  /** ISO timestamp of when the Surf instance was created. */
+  updatedAt: string;
+}
+
+/** Result from checkForUpdates(). */
+export interface UpdateCheckResult {
+  changed: boolean;
+  checksum: string;
+}
+
+// ─── Response Types ─────────────────────────────────────────────────────────
+
+export type SurfErrorCode =
+  | 'UNKNOWN_COMMAND'
+  | 'INVALID_PARAMS'
+  | 'AUTH_REQUIRED'
+  | 'AUTH_FAILED'
+  | 'SESSION_EXPIRED'
+  | 'RATE_LIMITED'
+  | 'INTERNAL_ERROR'
+  | 'NOT_SUPPORTED';
+
+export interface ExecuteResponse {
+  ok: true;
+  requestId?: string;
+  result: unknown;
+  state?: Record<string, unknown>;
+  sessionId?: string;
+}
+
+export interface ErrorResponse {
+  ok: false;
+  requestId?: string;
+  error: {
+    code: SurfErrorCode;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+}
+
+export type SurfResponse = ExecuteResponse | ErrorResponse;
+
+// ─── Client Options ─────────────────────────────────────────────────────────
+
+export interface RetryConfig {
+  maxAttempts: number;
+  backoffMs: number;
+  backoffMultiplier: number;
+  /** HTTP status codes to retry on. Default: [429, 502, 503, 504] */
+  retryOn?: number[];
+}
+
+export interface CacheConfig {
+  /** Cache TTL in milliseconds. */
+  ttlMs: number;
+  /** Maximum number of cached entries. */
+  maxSize: number;
+}
+
+/** Typed commands map: Record<commandName, { params, result }> */
+export type TypedCommands = Record<string, { params: Record<string, unknown>; result: unknown }>;
+
+/** A typed proxy client where each method name corresponds to a command. */
+export type TypedClient<T extends TypedCommands> = {
+  [K in keyof T]: (params: T[K]['params']) => Promise<T[K]['result']>;
+};
+
+/** Pipeline step for multi-command requests. */
+export interface PipelineStep {
+  command: string;
+  params?: Record<string, unknown>;
+  as?: string;
+}
+
+export interface PipelineStepResult {
+  command: string;
+  ok: boolean;
+  result?: unknown;
+  error?: { code: string; message: string };
+}
+
+export interface PipelineResponse {
+  ok: boolean;
+  results: PipelineStepResult[];
+}
+
+export interface SurfClientOptions {
+  /** Base URL of the Surf-enabled site */
+  baseUrl: string;
+  /** Pre-loaded manifest (skips discovery) */
+  manifest?: SurfManifest;
+  /** Auth token for authenticated commands */
+  auth?: string;
+  /** Custom fetch implementation */
+  fetch?: typeof globalThis.fetch;
+  /** Retry configuration for failed requests. */
+  retry?: RetryConfig;
+  /** Response cache configuration. */
+  cache?: CacheConfig;
+  /** Timeout for manifest discovery in ms. Default: 5000 */
+  discoverTimeout?: number;
+}
+
+export interface SurfSession {
+  /** Session ID */
+  readonly id: string;
+  /** Current session state */
+  readonly state: Record<string, unknown>;
+  /** Execute a command within this session */
+  execute(command: string, params?: Record<string, unknown>): Promise<unknown>;
+  /** End the session */
+  end(): Promise<void>;
+}
+
+// ─── WebSocket Message Types ────────────────────────────────────────────────
+
+export interface WsResultMessage {
+  type: 'result';
+  id: string;
+  ok: boolean;
+  result?: unknown;
+  state?: Record<string, unknown>;
+  error?: {
+    code: SurfErrorCode;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+}
+
+export interface WsEventMessage {
+  type: 'event';
+  event: string;
+  data: unknown;
+}
+
+export type WsIncomingMessage = WsResultMessage | WsEventMessage;

@@ -1,0 +1,93 @@
+{
+  "name": "@surfjs/core",
+  "version": "0.1.0",
+  "description": "Give AI agents a CLI to your website",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./fastify": {
+      "import": {
+        "types": "./dist/adapters/fastify.d.ts",
+        "default": "./dist/adapters/fastify.js"
+      },
+      "require": {
+        "types": "./dist/adapters/fastify.d.cts",
+        "default": "./dist/adapters/fastify.cjs"
+      }
+    },
+    "./hono": {
+      "import": {
+        "types": "./dist/adapters/hono.d.ts",
+        "default": "./dist/adapters/hono.js"
+      },
+      "require": {
+        "types": "./dist/adapters/hono.d.cts",
+        "default": "./dist/adapters/hono.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "fastify": ">=4.0.0",
+    "hono": ">=4.0.0",
+    "ws": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ws": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "hono": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "fastify": "^5.8.2",
+    "hono": "^4.12.8",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.0",
+    "ws": "^8.19.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "surf",
+    "ai",
+    "agents",
+    "protocol",
+    "commands"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hauselabs/surf.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://surf.codes",
+  "bugs": {
+    "url": "https://github.com/hauselabs/surf/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
