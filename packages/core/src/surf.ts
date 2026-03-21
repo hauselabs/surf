@@ -19,6 +19,24 @@ import {
 import { attachWebSocket } from './transport/websocket.js';
 import { generateBrowserScript, createWindowBridge } from './transport/window.js';
 
+/** Surf Live state sync API — available on SurfInstance when live is enabled. */
+export interface SurfLive {
+  /**
+   * Push full state to all clients subscribed to a channel.
+   * Clients using `useSurfState()` auto-update.
+   */
+  setState(channelId: string, state: unknown): void;
+  /**
+   * Push a partial state patch to all clients subscribed to a channel.
+   * Clients can apply the patch incrementally.
+   */
+  patchState(channelId: string, patch: unknown): void;
+  /**
+   * Emit a custom event to all clients subscribed to a channel.
+   */
+  emit(event: string, data: unknown, channelId: string): void;
+}
+
 export interface SurfInstance {
   use(middleware: SurfMiddleware): void;
   manifest(): SurfManifest;
@@ -29,6 +47,8 @@ export interface SurfInstance {
   browserScript(): string;
   browserBridge(): string;
   emit(event: string, data: unknown): void;
+  /** Surf Live real-time state sync. Only available when `live.enabled` is true. */
+  readonly live: SurfLive;
   readonly events: EventBus;
   readonly sessions: SessionStore;
   readonly commands: CommandRegistry;
@@ -47,6 +67,7 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   const manifestData = await generateManifest(config);
   const manifestDataAuthed = await generateManifest(config, { authenticated: true });
 
+  let liveVersion = 0;
   const middlewareStack: SurfMiddleware[] = [];
 
   if (config.authVerifier) {
@@ -123,6 +144,7 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
           registry,
           sessions: sessionStore,
           events: eventBus,
+          live: config.live,
         });
       } catch {
         throw new Error(
@@ -141,6 +163,22 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
 
     emit(event: string, data: unknown) {
       eventBus.emit(event, data);
+    },
+
+    get live(): SurfLive {
+      return {
+        setState(channelId: string, state: unknown) {
+          liveVersion++;
+          eventBus.emitToChannel('surf:state', { channel: channelId, state, version: liveVersion }, channelId);
+        },
+        patchState(channelId: string, patch: unknown) {
+          liveVersion++;
+          eventBus.emitToChannel('surf:patch', { channel: channelId, patch, version: liveVersion }, channelId);
+        },
+        emit(event: string, data: unknown, channelId: string) {
+          eventBus.emitToChannel(event, data, channelId);
+        },
+      };
     },
 
     get events() {

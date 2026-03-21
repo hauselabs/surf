@@ -1,7 +1,7 @@
 // ─── Main Entry Point ────────────────────────────────────────────────────────
 
 export { createSurf } from './surf.js';
-export type { SurfInstance } from './surf.js';
+export type { SurfInstance, SurfLive } from './surf.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -49,8 +49,13 @@ export type {
   WsEventMessage,
   WsAuthMessage,
   WsSessionMessage,
+  WsSubscribeMessage,
+  WsUnsubscribeMessage,
   WsIncomingMessage,
   WsOutgoingMessage,
+
+  // Live config
+  LiveConfig,
 
   // Error codes
   SurfErrorCode,
@@ -133,5 +138,5 @@ export type { InferParam, InferParams } from './infer.js';
 export { CommandRegistry } from './commands.js';
 export { InMemorySessionStore } from './session.js';
 export { EventBus } from './events.js';
-export type { EventScope, ScopedEventDefinition } from './events.js';
+export type { EventScope, ScopedEventDefinition, SubscribeOptions } from './events.js';
 export { generateManifest, type ManifestOptions } from './manifest.js';

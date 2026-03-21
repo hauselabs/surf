@@ -1,4 +1,4 @@
-import type { WsIncomingMessage, WsOutgoingMessage, WsEventMessage, SurfResponse } from '../types.js';
+import type { WsIncomingMessage, WsOutgoingMessage, WsEventMessage, SurfResponse, LiveConfig } from '../types.js';
 import type { CommandRegistry } from '../commands.js';
 import type { InMemorySessionStore } from '../session.js';
 import type { EventBus } from '../events.js';
@@ -7,6 +7,7 @@ interface WsTransportOptions {
   registry: CommandRegistry;
   sessions: InMemorySessionStore;
   events: EventBus;
+  live?: LiveConfig;
 }
 
 interface WebSocketLike {
@@ -41,12 +42,16 @@ export function attachWebSocket(
   wss: WebSocketServerLike,
   options: WsTransportOptions,
 ): void {
-  const { registry, sessions, events } = options;
+  const { registry, sessions, events, live } = options;
+  const liveEnabled = live?.enabled === true;
+  const maxChannels = live?.maxChannelsPerConnection ?? 10;
 
   wss.on('connection', (ws) => {
     let authToken: string | undefined;
     let sessionId: string | undefined;
     const unsubscribes: Array<() => void> = [];
+    const subscribedChannels = new Set<string>();
+    const channelUnsubscribes = new Map<string, () => void>();
 
     // Subscribe to events — but scoped to this connection's session
     function subscribeToEvents(): void {
@@ -114,6 +119,88 @@ export function attachWebSocket(
           break;
         }
 
+        case 'subscribe': {
+          if (!liveEnabled) break;
+          const channels = msg.channels;
+          if (!Array.isArray(channels)) break;
+
+          for (const channelId of channels) {
+            if (typeof channelId !== 'string') continue;
+            if (subscribedChannels.has(channelId)) continue;
+            if (subscribedChannels.size >= maxChannels) {
+              const errMsg: WsOutgoingMessage = {
+                type: 'result',
+                id: 'subscribe',
+                ok: false,
+                error: { code: 'INVALID_PARAMS', message: `Max ${maxChannels} channels per connection` },
+              };
+              ws.send(JSON.stringify(errMsg));
+              break;
+            }
+
+            // Channel auth check
+            if (live?.channelAuth) {
+              if (!authToken) {
+                const errMsg: WsOutgoingMessage = {
+                  type: 'result',
+                  id: 'subscribe',
+                  ok: false,
+                  error: { code: 'AUTH_REQUIRED', message: 'Auth required for channel subscription' },
+                };
+                ws.send(JSON.stringify(errMsg));
+                continue;
+              }
+              const allowed = await live.channelAuth(authToken, channelId);
+              if (!allowed) continue;
+            }
+
+            subscribedChannels.add(channelId);
+
+            // Listen for channel-scoped events
+            const unsub = events.on(
+              'surf:state',
+              (data) => {
+                if (ws.readyState !== WS_OPEN) return;
+                const eventMsg: WsEventMessage = { type: 'event', event: 'surf:state', data };
+                ws.send(JSON.stringify(eventMsg));
+              },
+              { channelId },
+            );
+            channelUnsubscribes.set(channelId, unsub);
+
+            // Also listen for patch events
+            const unsubPatch = events.on(
+              'surf:patch',
+              (data) => {
+                if (ws.readyState !== WS_OPEN) return;
+                const eventMsg: WsEventMessage = { type: 'event', event: 'surf:patch', data };
+                ws.send(JSON.stringify(eventMsg));
+              },
+              { channelId },
+            );
+            const origUnsub = channelUnsubscribes.get(channelId)!;
+            channelUnsubscribes.set(channelId, () => { origUnsub(); unsubPatch(); });
+          }
+          break;
+        }
+
+        case 'unsubscribe': {
+          if (!liveEnabled) break;
+          const channels = msg.channels;
+          if (!Array.isArray(channels)) break;
+
+          for (const channelId of channels) {
+            if (typeof channelId !== 'string') continue;
+            subscribedChannels.delete(channelId);
+            const unsub = channelUnsubscribes.get(channelId);
+            if (unsub) {
+              unsub();
+              channelUnsubscribes.delete(channelId);
+            }
+          }
+          break;
+        }
+
         case 'execute': {
           const effectiveSessionId = msg.sessionId ?? sessionId;
           let sessionState: Record<string, unknown> | undefined;
@@ -165,6 +252,12 @@ export function attachWebSocket(
       for (const unsub of unsubscribes) {
         unsub();
       }
+      // Clean up channel subscriptions
+      for (const unsub of channelUnsubscribes.values()) {
+        unsub();
+      }
+      channelUnsubscribes.clear();
+      subscribedChannels.clear();
       // Also clean up any session-scoped listeners
       if (sessionId) {
         events.removeSession(sessionId);
@@ -175,6 +268,11 @@ export function attachWebSocket(
       for (const unsub of unsubscribes) {
         unsub();
       }
+      for (const unsub of channelUnsubscribes.values()) {
+        unsub();
+      }
+      channelUnsubscribes.clear();
+      subscribedChannels.clear();
       if (sessionId) {
         events.removeSession(sessionId);
       }

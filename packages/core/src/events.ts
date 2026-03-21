@@ -7,17 +7,25 @@ type EventCallback = (data: unknown) => void;
  * - `'global'` — broadcast to all subscribers (e.g. system announcements)
  * - `'session'` — only deliver to the session that triggered it
  * - `'broadcast'` — deliver to all sessions (legacy, opt-in)
+ * - `'channel'` — deliver only to listeners subscribed to a specific channel (Surf Live)
  */
-export type EventScope = 'global' | 'session' | 'broadcast';
+export type EventScope = 'global' | 'session' | 'broadcast' | 'channel';
 
 export interface ScopedEventDefinition extends EventDefinition {
   /** Who receives this event. Default: `'session'` */
   scope?: EventScope;
 }
 
+/** Options for subscribing to events with optional session or channel scoping. */
+export interface SubscribeOptions {
+  sessionId?: string;
+  channelId?: string;
+}
+
 interface ScopedCallback {
   callback: EventCallback;
   sessionId?: string;
+  channelId?: string;
 }
 
 /**
@@ -36,19 +44,26 @@ export class EventBus {
   }
 
   /**
-   * Subscribe to an event, optionally scoped to a session.
-   * If `sessionId` is provided, only events emitted for that session
-   * (or global/broadcast events) will be delivered.
+   * Subscribe to an event, optionally scoped to a session or channel.
+   *
+   * Overloads:
+   * - `on(event, callback)` — unscoped (server-side, receives all)
+   * - `on(event, callback, sessionId)` — session-scoped (backward compatible)
+   * - `on(event, callback, { sessionId?, channelId? })` — explicit options
    *
    * Returns an unsubscribe function.
    */
-  on(event: string, callback: EventCallback, sessionId?: string): () => void {
+  on(event: string, callback: EventCallback, options?: string | SubscribeOptions): () => void {
     let set = this.listeners.get(event);
     if (!set) {
       set = new Set();
       this.listeners.set(event, set);
     }
-    const entry: ScopedCallback = { callback, sessionId };
+
+    const entry: ScopedCallback = typeof options === 'string'
+      ? { callback, sessionId: options }
+      : { callback, sessionId: options?.sessionId, channelId: options?.channelId };
+
     set.add(entry);
     return () => set.delete(entry);
   }
@@ -68,8 +83,34 @@ export class EventBus {
     const scope: EventScope = (def as ScopedEventDefinition)?.scope ?? 'session';
 
     for (const entry of set) {
+      // Channel-scoped events skip non-channel listeners
+      if (scope === 'channel') continue;
+
       const shouldDeliver = this.shouldDeliver(scope, entry.sessionId, sessionId);
       if (!shouldDeliver) continue;
+
+      try {
+        entry.callback(data);
+      } catch {
+        // Swallow listener errors — don't break emit loop
+      }
+    }
+  }
+
+  /**
+   * Emit an event scoped to a specific channel.
+   * Only listeners subscribed to this channel will receive the event.
+   *
+   * @param event - Event name
+   * @param data - Event payload
+   * @param channelId - Target channel identifier
+   */
+  emitToChannel(event: string, data: unknown, channelId: string): void {
+    const set = this.listeners.get(event);
+    if (!set) return;
+
+    for (const entry of set) {
+      if (entry.channelId !== channelId) continue;
 
       try {
         entry.callback(data);
@@ -123,6 +164,19 @@ export class EventBus {
     for (const [, set] of this.listeners) {
       for (const entry of set) {
         if (entry.sessionId === sessionId) {
+          set.delete(entry);
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove all listeners for a specific channel (cleanup on unsubscribe).
+   */
+  removeChannel(channelId: string): void {
+    for (const [, set] of this.listeners) {
+      for (const entry of set) {
+        if (entry.channelId === channelId) {
           set.delete(entry);
         }
       }

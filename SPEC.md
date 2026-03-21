@@ -442,4 +442,118 @@ Agents SHOULD respect `maxLimit` and MUST NOT assume a specific page size.
 
 ---
 
+## 9. Surf Live — Real-Time State Sync
+
+Surf Live enables real-time state broadcasting from the server to all connected browser clients via WebSocket channels. This is designed for use cases where an AI agent executes commands on the server and the resulting state changes should be reflected in all connected UIs instantly.
+
+### 9.1 Channels
+
+A **channel** is a string identifier (e.g. `project-123`, `document-abc`) that groups WebSocket connections. Clients subscribe to channels, and the server emits events scoped to specific channels. Only connections subscribed to a channel receive its events.
+
+Channels are opt-in — Surf Live must be explicitly enabled in the server config:
+
+```typescript
+const surf = createSurf({
+  name: 'My App',
+  commands: { /* ... */ },
+  live: {
+    enabled: true,
+    maxChannelsPerConnection: 10,
+    channelAuth: async (token, channelId) => {
+      return verifyAccess(token, channelId);
+    },
+  },
+});
+```
+
+### 9.2 WebSocket Subscribe/Unsubscribe
+
+Clients subscribe to channels by sending:
+
+```json
+{ "type": "subscribe", "channels": ["project-123", "document-abc"] }
+```
+
+Clients unsubscribe by sending:
+
+```json
+{ "type": "unsubscribe", "channels": ["project-123"] }
+```
+
+If `channelAuth` is configured, the client MUST have sent an `auth` message before subscribing. The auth callback is invoked for each channel. Subscriptions that fail auth are silently dropped.
+
+A connection may subscribe to at most `maxChannelsPerConnection` channels (default: 10). Exceeding this limit returns an error.
+
+### 9.3 State Events
+
+Surf Live defines two reserved event types for state synchronization:
+
+#### `surf:state` — Full State Update
+
+```json
+{
+  "type": "event",
+  "event": "surf:state",
+  "data": {
+    "channel": "project-123",
+    "state": { "timeline": { "clips": [], "playhead": 42.5 } },
+    "version": 7
+  }
+}
+```
+
+#### `surf:patch` — Partial State Patch
+
+```json
+{
+  "type": "event",
+  "event": "surf:patch",
+  "data": {
+    "channel": "project-123",
+    "patch": { "playhead": 43.0 },
+    "version": 8
+  }
+}
+```
+
+The `version` field is a monotonically increasing integer used for ordering and deduplication. Clients SHOULD ignore events with a version ≤ the last applied version.
+
+### 9.4 Server-Side API
+
+The `SurfInstance` exposes a `live` property with convenience methods:
+
+```typescript
+// Full state push
+surf.live.setState('project-123', { timeline: { clips: [...], playhead: 42.5 } });
+
+// Incremental patch
+surf.live.patchState('project-123', { playhead: 43.0 });
+
+// Custom channel event
+surf.live.emit('cursor.moved', { x: 100, y: 200 }, 'project-123');
+```
+
+### 9.5 Security Model
+
+- **Off by default** — `live.enabled` must be set to `true`
+- **Channel auth** — optional async callback to verify subscription access
+- **Max channels per connection** — prevents resource abuse (default: 10)
+- **Isolation** — channel events are never leaked to session-scoped or global listeners
+- **Auth gating** — if `channelAuth` is configured, unauthenticated connections cannot subscribe
+
+### 9.6 Example Flow
+
+```
+1. Client connects via WebSocket
+2. Client sends: { type: "auth", token: "bearer-xyz" }
+3. Client sends: { type: "subscribe", channels: ["project-123"] }
+4. Server verifies auth → subscribes connection to channel
+5. Agent executes: surf.live.setState("project-123", { ... })
+6. Server broadcasts: { type: "event", event: "surf:state", data: { ... } }
+7. All clients subscribed to "project-123" receive the update
+8. React clients with useSurfState("project-123", initial) auto-update
+```
+
+---
+
 *This specification is a living document. Feedback and contributions welcome at [github.com/hauselabs/surf](https://github.com/hauselabs/surf).*

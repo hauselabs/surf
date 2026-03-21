@@ -158,6 +158,85 @@ describe('EventBus', () => {
     });
   });
 
+  describe('channel scoping', () => {
+    it('channel-scoped events only go to listeners on that channel', () => {
+      const bus = new EventBus();
+      const channelA = vi.fn();
+      const channelB = vi.fn();
+      const unscoped = vi.fn();
+
+      bus.on('surf:state', channelA, { channelId: 'project-123' });
+      bus.on('surf:state', channelB, { channelId: 'project-456' });
+      bus.on('surf:state', unscoped);
+
+      bus.emitToChannel('surf:state', { state: 'hello' }, 'project-123');
+
+      expect(channelA).toHaveBeenCalledWith({ state: 'hello' });
+      expect(channelB).not.toHaveBeenCalled();
+      expect(unscoped).not.toHaveBeenCalled();
+    });
+
+    it('removeChannel cleans up all listeners for that channel', () => {
+      const bus = new EventBus();
+      const cb = vi.fn();
+
+      bus.on('surf:state', cb, { channelId: 'ch-1' });
+      bus.on('surf:patch', cb, { channelId: 'ch-1' });
+
+      bus.removeChannel('ch-1');
+
+      bus.emitToChannel('surf:state', 'data', 'ch-1');
+      bus.emitToChannel('surf:patch', 'data', 'ch-1');
+
+      expect(cb).not.toHaveBeenCalled();
+    });
+
+    it('removeChannel does not affect other channels', () => {
+      const bus = new EventBus();
+      const cbA = vi.fn();
+      const cbB = vi.fn();
+
+      bus.on('surf:state', cbA, { channelId: 'ch-A' });
+      bus.on('surf:state', cbB, { channelId: 'ch-B' });
+
+      bus.removeChannel('ch-A');
+
+      bus.emitToChannel('surf:state', 'data', 'ch-B');
+
+      expect(cbA).not.toHaveBeenCalled();
+      expect(cbB).toHaveBeenCalled();
+    });
+
+    it('channel events do not leak to session-scoped listeners via emit()', () => {
+      const bus = new EventBus({
+        'my.event': { description: 'test', scope: 'channel' },
+      });
+      const sessionCb = vi.fn();
+      const channelCb = vi.fn();
+
+      bus.on('my.event', sessionCb, 'sess-A');
+      bus.on('my.event', channelCb, { channelId: 'ch-1' });
+
+      // Regular emit should not deliver to session listeners for channel-scoped events
+      bus.emit('my.event', 'data', 'sess-A');
+      expect(sessionCb).not.toHaveBeenCalled();
+
+      // Channel emit should deliver to channel listeners
+      bus.emitToChannel('my.event', 'data', 'ch-1');
+      expect(channelCb).toHaveBeenCalled();
+    });
+
+    it('supports SubscribeOptions with both sessionId and channelId', () => {
+      const bus = new EventBus();
+      const cb = vi.fn();
+
+      bus.on('surf:state', cb, { sessionId: 'sess-1', channelId: 'ch-1' });
+
+      bus.emitToChannel('surf:state', 'data', 'ch-1');
+      expect(cb).toHaveBeenCalledWith('data');
+    });
+  });
+
   describe('error isolation', () => {
     it('one listener throwing does not break other listeners', () => {
       const bus = new EventBus({ ping: { description: 'test', scope: 'global' } });

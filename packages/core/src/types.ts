@@ -258,6 +258,21 @@ export interface SurfConfig {
   strict?: boolean;
   /** Enable debug mode — exposes detailed error messages. Disable in production. */
   debug?: boolean;
+  /** Surf Live — real-time state sync configuration. Disabled by default. */
+  live?: LiveConfig;
+}
+
+/**
+ * Configuration for Surf Live — real-time state sync via channels.
+ * Must be explicitly enabled. Off by default for security.
+ */
+export interface LiveConfig {
+  /** Enable Surf Live real-time broadcasting. Default: false */
+  enabled?: boolean;
+  /** Maximum channels per connection. Default: 10 */
+  maxChannelsPerConnection?: number;
+  /** Channel auth — verify if a token can subscribe to a channel */
+  channelAuth?: (token: string, channelId: string) => Promise<boolean>;
 }
 
 // ─── Transport Types ────────────────────────────────────────────────────────
@@ -366,7 +381,17 @@ export interface WsSessionMessage {
   sessionId?: string;
 }
 
-export type WsIncomingMessage = WsExecuteMessage | WsAuthMessage | WsSessionMessage;
+export interface WsSubscribeMessage {
+  type: 'subscribe';
+  channels: string[];
+}
+
+export interface WsUnsubscribeMessage {
+  type: 'unsubscribe';
+  channels: string[];
+}
+
+export type WsIncomingMessage = WsExecuteMessage | WsAuthMessage | WsSessionMessage | WsSubscribeMessage | WsUnsubscribeMessage;
 export type WsOutgoingMessage = WsResultMessage | WsEventMessage;
 
 // ─── Session Types ──────────────────────────────────────────────────────────
