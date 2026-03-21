@@ -730,6 +730,16 @@ When adding Surf to your website, commands should **only mirror actions that reg
 
 **Rule of thumb:** If a user can't do it from the browser without special access, it shouldn't be an unauthenticated Surf command. Use `auth: 'required'` for any command that modifies data or performs actions on behalf of a user.
 
+### Design for zero prior knowledge
+
+Agents arrive with **no context** about your site — no IDs, slugs, or internal references. Design commands so agents can explore from scratch:
+
+- ✅ `search("headphones")` → returns items with IDs → `product.get("WH-100")`
+- ✅ `articles.list()` → returns slugs → `articles.get("my-post")`
+- ❌ `article.get(slug)` with no way to discover valid slugs
+
+**Good pattern:** search/list → get details → take action. Never require an ID without a discovery path to find it.
+
 ### Built-in protections
 
 Surf includes multiple layers of security by default:
