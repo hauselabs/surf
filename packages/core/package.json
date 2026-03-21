@@ -1,7 +1,7 @@
 {
   "name": "@surfjs/core",
   "version": "0.1.6",
-  "description": "Give AI agents a CLI to your website",
+  "description": "Give AI agents a typed CLI to your website, app, or API",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

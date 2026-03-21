@@ -1,7 +1,7 @@
 {
   "name": "@surfjs/cli",
   "version": "0.1.6",
-  "description": "CLI to inspect and test Surf-enabled websites",
+  "description": "CLI to inspect and test Surf-enabled sites and apps",
   "type": "module",
   "bin": {
     "surf": "./dist/index.js"
