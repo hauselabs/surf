@@ -7,9 +7,11 @@
  *   surf ping <url>                 Check if a site is Surf-enabled
  *
  * Global flags:
- *   --json          Machine-readable JSON output
- *   --auth <token>  Bearer token for authenticated commands
- *   --verbose       Show full parameter schemas (inspect)
+ *   --json               Machine-readable JSON output
+ *   --auth <token>       Bearer token for authenticated commands
+ *   --verbose            Show full parameter schemas (inspect)
+ *   --base-path <path>   Override the execute endpoint path (default: /surf/execute)
+ *                        Use '/api/surf/execute' for @surfjs/next App Router deployments
  */
 
 import * as readline from 'node:readline';
@@ -75,6 +77,8 @@ interface ParsedArgs {
   json: boolean;
   auth: string | undefined;
   verbose: boolean;
+  /** Override the execute endpoint path. Default: '/surf/execute'. */
+  basePath: string | undefined;
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -85,6 +89,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   let json = false;
   let auth: string | undefined;
   let verbose = false;
+  let basePath: string | undefined;
 
   let i = command === 'test' ? 3 : 2;
   while (i < argv.length) {
@@ -98,6 +103,9 @@ function parseArgs(argv: string[]): ParsedArgs {
     } else if (arg === '--verbose') {
       verbose = true;
       i++;
+    } else if ((arg === '--base-path' || arg === '--basePath') && i + 1 < argv.length) {
+      basePath = argv[i + 1];
+      i += 2;
     } else if (arg.startsWith('--') && i + 1 < argv.length) {
       const key = arg.slice(2);
       params[key] = argv[i + 1];
@@ -107,7 +115,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     }
   }
 
-  return { command, url, subcommand, params, json, auth, verbose };
+  return { command, url, subcommand, params, json, auth, verbose, basePath };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -383,7 +391,8 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
 
   const executeStart = performance.now();
   try {
-    const executeUrl = new URL('/surf/execute', siteUrl).toString();
+    const executePath = opts.basePath ?? '/surf/execute';
+    const executeUrl = new URL(executePath, siteUrl).toString();
     const res = await fetch(executeUrl, {
       method: 'POST',
       headers: buildHeaders(opts.auth),

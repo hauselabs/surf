@@ -161,6 +161,12 @@ export interface SurfClientOptions {
   cache?: CacheConfig;
   /** Timeout for manifest discovery in ms. Default: 5000 */
   discoverTimeout?: number;
+  /**
+   * Base path for Surf execute endpoint. Default: '/surf/execute'.
+   * Override to '/api/surf/execute' when using @surfjs/next with App Router.
+   * @example '/api/surf/execute'
+   */
+  basePath?: string;
 }
 
 export interface SurfSession {

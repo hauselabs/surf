@@ -144,6 +144,9 @@ function sleep(ms: number): Promise<void> {
  * const result = await client.execute('search', { query: 'shoes' });
  * ```
  */
+/** Default base path — matches the built-in core middleware mount point. */
+const DEFAULT_BASE_PATH = '/surf';
+
 export class SurfClient {
   readonly manifest: SurfManifest;
   private readonly http: HttpTransport;
@@ -151,6 +154,7 @@ export class SurfClient {
   private readonly auth?: string;
   private readonly retryConfig?: RetryConfig;
   private readonly cache?: ResponseCache;
+  private readonly surfBasePath: string;
   private ws: WebSocketTransport | null = null;
 
   private constructor(manifest: SurfManifest, options: SurfClientOptions) {
@@ -158,6 +162,9 @@ export class SurfClient {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.auth = options.auth;
     this.retryConfig = options.retry;
+    // Normalise: strip trailing slash, ensure leading slash
+    const rawBasePath = options.basePath ?? `${DEFAULT_BASE_PATH}/execute`;
+    this.surfBasePath = rawBasePath.startsWith('/') ? rawBasePath : `/${rawBasePath}`;
     if (options.cache) {
       this.cache = new ResponseCache(options.cache);
     }
@@ -165,6 +172,7 @@ export class SurfClient {
       baseUrl: this.baseUrl,
       auth: options.auth,
       fetch: options.fetch ?? globalThis.fetch,
+      basePath: this.surfBasePath,
     });
   }
 
@@ -253,7 +261,9 @@ export class SurfClient {
    * Execute multiple commands in a pipeline (single round-trip).
    */
   async pipeline(steps: PipelineStep[], options?: { sessionId?: string; continueOnError?: boolean }): Promise<PipelineResponse> {
-    const url = `${this.baseUrl}/surf/pipeline`;
+    // Derive pipeline URL from the configured execute path (replace /execute → /pipeline)
+    const pipelinePath = this.surfBasePath.replace(/\/execute$/, '/pipeline');
+    const url = `${this.baseUrl}${pipelinePath}`;
     const fetchFn = (this.http as unknown as { fetch: typeof globalThis.fetch }).fetch ?? globalThis.fetch;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (this.auth) headers['Authorization'] = `Bearer ${this.auth}`;

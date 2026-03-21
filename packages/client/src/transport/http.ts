@@ -4,7 +4,15 @@ export interface HttpTransportOptions {
   baseUrl: string;
   auth?: string;
   fetch: typeof globalThis.fetch;
+  /**
+   * Base path for the Surf execute endpoint. Default: '/surf/execute'.
+   * Override to '/api/surf/execute' when using @surfjs/next.
+   */
+  basePath?: string;
 }
+
+/** Default execute path — matches the built-in core middleware mount point. */
+const DEFAULT_EXECUTE_PATH = '/surf/execute';
 
 /**
  * HTTP transport for executing Surf commands via POST /surf/execute.
@@ -13,11 +21,13 @@ export class HttpTransport {
   private readonly baseUrl: string;
   private readonly auth?: string;
   private readonly fetch: typeof globalThis.fetch;
+  private readonly executePath: string;
 
   constructor(options: HttpTransportOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.auth = options.auth;
     this.fetch = options.fetch;
+    this.executePath = options.basePath ?? DEFAULT_EXECUTE_PATH;
   }
 
   async execute(
@@ -41,7 +51,7 @@ export class HttpTransport {
       ...(requestId ? { requestId } : {}),
     });
 
-    const response = await this.fetch(`${this.baseUrl}/surf/execute`, {
+    const response = await this.fetch(`${this.baseUrl}${this.executePath}`, {
       method: 'POST',
       headers,
       body,
