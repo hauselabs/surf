@@ -61,7 +61,7 @@ interface SurfManifest {
 interface ExecuteResponse {
   ok: boolean;
   result?: unknown;
-  error?: string;
+  error?: string | { code?: string; message?: string; details?: unknown };
   timing?: { ms?: number };
 }
 
@@ -314,7 +314,20 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
     return;
   }
 
-  // 3. Resolve params
+  // 3. Fail fast on auth-required commands without token
+  if (cmdSchema.auth === 'required' && !opts.auth) {
+    const msg = `${commandName} requires authentication. Provide a token with --auth <token>`;
+    if (opts.json) {
+      console.log(JSON.stringify({ ok: false, error: msg }));
+      process.exit(1);
+      return;
+    }
+    console.log(`\n   ${c.bgRed}${c.white}${c.bold} AUTH ${c.reset} ${c.red}${msg}${c.reset}\n`);
+    process.exit(1);
+    return;
+  }
+
+  // 4. Resolve params
   const paramSchemas = cmdSchema.params || {};
   const resolvedParams: Record<string, unknown> = {};
 
@@ -383,8 +396,14 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
     if (!res.ok) {
       let errorBody: string;
       try {
-        const errJson = (await res.json()) as { error?: string };
-        errorBody = errJson.error || `HTTP ${res.status}`;
+        const errJson = (await res.json()) as { error?: unknown };
+        const rawErr = errJson.error;
+        if (typeof rawErr === 'object' && rawErr !== null) {
+          const obj = rawErr as Record<string, unknown>;
+          errorBody = (obj.message as string) ?? (obj.code as string) ?? JSON.stringify(rawErr);
+        } else {
+          errorBody = (rawErr as string) || `HTTP ${res.status}`;
+        }
       } catch {
         errorBody = `HTTP ${res.status}`;
       }
@@ -412,7 +431,11 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
     if (body.ok) {
       console.log(`   ${c.bgGreen}${c.white}${c.bold} OK ${c.reset}`);
     } else {
-      console.log(`   ${c.bgRed}${c.white}${c.bold} ERROR ${c.reset} ${c.red}${body.error || 'Unknown error'}${c.reset}`);
+      const rawErr = body.error;
+      const errMsg = typeof rawErr === 'object' && rawErr !== null
+        ? ((rawErr as Record<string, unknown>).message as string) ?? ((rawErr as Record<string, unknown>).code as string) ?? JSON.stringify(rawErr)
+        : rawErr || 'Unknown error';
+      console.log(`   ${c.bgRed}${c.white}${c.bold} ERROR ${c.reset} ${c.red}${errMsg}${c.reset}`);
     }
     console.log();
 
