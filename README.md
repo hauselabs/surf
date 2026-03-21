@@ -35,7 +35,7 @@ import express from 'express';
 const app = express();
 app.use(express.json());
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My Store',
   commands: {
     search: {
@@ -63,7 +63,7 @@ That's it. Your site is now agent-navigable.
 Map your app's capabilities to typed, documented commands:
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'Acme Store',
   commands: {
     search: {
@@ -136,6 +136,8 @@ const results = await client.execute('search', { query: 'blue shoes', maxPrice: 
 | [`@surfjs/client`](./packages/client) | Agent-side SDK — discover, execute, pipeline, sessions, WebSocket, typed client | [![npm](https://img.shields.io/npm/v/@surfjs/client.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/client) |
 | [`@surfjs/cli`](./packages/cli) | Terminal tool — inspect, test, and ping Surf-enabled sites | [![npm](https://img.shields.io/npm/v/@surfjs/cli.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/cli) |
 | [`@surfjs/devui`](./packages/devui) | Interactive browser-based dev inspector for Surf commands | [![npm](https://img.shields.io/npm/v/@surfjs/devui.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/devui) |
+| [`@surfjs/next`](./packages/next) | Next.js App Router & Pages Router adapter | [![npm](https://img.shields.io/npm/v/@surfjs/next.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/next) |
+| [`@surfjs/zod`](./packages/zod) | Zod schema integration for typed command params | [![npm](https://img.shields.io/npm/v/@surfjs/zod.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/zod) |
 
 ---
 
@@ -149,7 +151,7 @@ import { createSurf } from '@surfjs/core';
 
 const app = express();
 app.use(express.json());
-const surf = createSurf({ name: 'My App', commands: { /* ... */ } });
+const surf = await createSurf({ name: 'My App', commands: { /* ... */ } });
 app.use(surf.middleware());
 ```
 
@@ -160,7 +162,7 @@ import Fastify from 'fastify';
 import { createSurf } from '@surfjs/core';
 import { fastifyPlugin } from '@surfjs/core/fastify';
 
-const surf = createSurf({ name: 'My App', commands: { /* ... */ } });
+const surf = await createSurf({ name: 'My App', commands: { /* ... */ } });
 const app = Fastify();
 app.register(fastifyPlugin(surf));
 ```
@@ -172,7 +174,7 @@ import { Hono } from 'hono';
 import { createSurf } from '@surfjs/core';
 import { honoApp } from '@surfjs/core/hono';
 
-const surf = createSurf({ name: 'My App', commands: { /* ... */ } });
+const surf = await createSurf({ name: 'My App', commands: { /* ... */ } });
 const app = new Hono();
 app.route('/', honoApp(surf));
 ```
@@ -189,7 +191,7 @@ export default { fetch: honoMiddleware(surf) };
 ```ts
 // app/api/surf/surf-instance.ts
 import { createSurf } from '@surfjs/core';
-export const surf = createSurf({ name: 'My App', commands: { /* ... */ } });
+export const surf = await createSurf({ name: 'My App', commands: { /* ... */ } });
 
 // app/api/surf/route.ts — GET /.well-known/surf.json (use next.config rewrite)
 import { NextResponse } from 'next/server';
@@ -251,7 +253,7 @@ The core building block. Each command has a description, typed parameters, optio
 Group related commands with dot-notation — just nest objects:
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   commands: {
     cart: {
@@ -272,7 +274,7 @@ const surf = createSurf({
 Define auth at the global level and per-command:
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   auth: { type: 'bearer', description: 'JWT token' },
   authVerifier: async (token, command) => {
@@ -314,7 +316,7 @@ Built-in `bearerVerifier` for simple token validation:
 
 ```ts
 import { bearerVerifier } from '@surfjs/core';
-const surf = createSurf({
+const surf = await createSurf({
   authVerifier: bearerVerifier(['token-1', 'token-2']),
   // ...
 });
@@ -336,7 +338,7 @@ const surf = createSurf({
 Global and per-command rate limits:
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   rateLimit: { windowMs: 60_000, maxRequests: 100, keyBy: 'ip' }, // Global
   commands: {
@@ -402,7 +404,7 @@ For long-running commands that produce incremental output:
 
 **Server:**
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'AI Writer',
   commands: {
     generate: {
@@ -511,7 +513,7 @@ Middleware has access to `ctx.command`, `ctx.params`, `ctx.context` (session, au
 Define shared types referenced across commands with `$ref`:
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   types: {
     Product: {
@@ -547,7 +549,7 @@ Surf events support **three delivery scopes** — a key security feature for mul
 | `broadcast` | Delivered to all connected clients |
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   events: {
     'order.updated': {
@@ -648,7 +650,7 @@ $ surf ping https://acme-store.com
 import { createSurf } from '@surfjs/core';
 import { createDevUI } from '@surfjs/devui';
 
-const surf = createSurf({ name: 'My App', commands: { /* ... */ } });
+const surf = await createSurf({ name: 'My App', commands: { /* ... */ } });
 const devui = createDevUI(surf, { port: 4242 });
 
 // Standalone server
@@ -679,7 +681,7 @@ The DevUI features:
 
 ## API Reference
 
-### `createSurf(config): SurfInstance`
+### `createSurf(config): Promise<SurfInstance>`
 
 The main entry point. Returns a `SurfInstance`.
 
