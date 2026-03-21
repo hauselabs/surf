@@ -135,6 +135,29 @@ interface CommandExample {
 }
 ```
 
+### `defineCommand` — Typed Handlers
+
+Use `defineCommand` instead of plain object literals to get **automatic type inference** for your `run` handler's `params` argument. No manual generics needed.
+
+```ts
+import { defineCommand } from '@surfjs/core';
+
+const getUser = defineCommand({
+  description: 'Get a user by ID',
+  params: {
+    id:     { type: 'string', required: true, description: 'User ID' },
+    expand: { type: 'boolean', description: 'Include related objects' },
+  },
+  run(params, ctx) {
+    // params.id     → string          (required — always present)
+    // params.expand  → boolean | undefined (optional)
+    return db.users.find(params.id);
+  },
+});
+```
+
+`defineCommand` is an identity function at runtime — zero overhead. It returns a standard `CommandDefinition`, so it works everywhere `createSurf` expects one.
+
 ### ParamSchema
 
 ```ts

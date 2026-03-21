@@ -123,6 +123,11 @@ export { honoApp, honoMiddleware } from './adapters/hono.js';
 
 export { paginatedResult } from './pagination.js';
 
+// ─── Typed Command Helpers ────────────────────────────────────────────────────
+
+export { defineCommand } from './infer.js';
+export type { InferParam, InferParams } from './infer.js';
+
 // ─── Internal utilities (for advanced use) ────────────────────────────────────
 
 export { CommandRegistry } from './commands.js';
