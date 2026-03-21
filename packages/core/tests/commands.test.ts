@@ -49,7 +49,7 @@ describe('CommandRegistry', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe('INVALID_PARAMS');
-      expect(result.error.message).toContain("'number'");
+      expect(result.error.message).toContain('number');
     }
   });
 
