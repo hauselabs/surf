@@ -1,0 +1,61 @@
+{
+  "name": "@surfjs/zod",
+  "version": "0.1.6",
+  "description": "Zod schema integration for Surf.js — define commands with Zod instead of raw ParamSchema",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@surfjs/core": ">=0.1.0",
+    "zod": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@surfjs/core": "workspace:*",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.0",
+    "zod": "^3.24.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "surf",
+    "zod",
+    "schema",
+    "validation",
+    "ai",
+    "agents",
+    "protocol"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hauselabs/surf.git",
+    "directory": "packages/zod"
+  },
+  "homepage": "https://surf.codes",
+  "bugs": {
+    "url": "https://github.com/hauselabs/surf/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
