@@ -6,8 +6,8 @@ import { SurfClient, SurfClientError } from '../../client/src/index.js';
 
 const VALID_TOKEN = 'test-secret-token-abc123';
 
-function createTestSurf() {
-  return createSurf({
+async function createTestSurf() {
+  return await createSurf({
     name: 'E2E-Shop',
     version: '1.0.0',
     description: 'E2E test shop API',
@@ -78,7 +78,7 @@ describe('E2E: Real HTTP server with @surfjs/client', () => {
   let baseUrl: string;
 
   beforeAll(async () => {
-    const surf = createTestSurf();
+    const surf = await createTestSurf();
     const middleware = surf.middleware();
 
     server = http.createServer(async (req, res) => {
@@ -251,7 +251,7 @@ describe('E2E: Real HTTP server with @surfjs/client', () => {
 
   it('enforces global rate limit and returns 429', async () => {
     // Create a fresh surf instance with very tight rate limit for this test
-    const tightSurf = createSurf({
+    const tightSurf = await createSurf({
       name: 'RateLimit-Test',
       rateLimit: {
         windowMs: 10000,

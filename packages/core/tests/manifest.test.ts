@@ -26,15 +26,15 @@ describe('generateManifest', () => {
     },
   };
 
-  it('generates manifest from config', () => {
-    const manifest = generateManifest(config);
+  it('generates manifest from config', async () => {
+    const manifest = await generateManifest(config);
     expect(manifest.name).toBe('TestApp');
     expect(manifest.description).toBe('A test app');
     expect(manifest.baseUrl).toBe('https://example.com');
   });
 
-  it('includes all commands with descriptions and params', () => {
-    const manifest = generateManifest(config);
+  it('includes all commands with descriptions and params', async () => {
+    const manifest = await generateManifest(config);
     expect(manifest.commands.ping).toBeDefined();
     expect(manifest.commands.ping.description).toBe('Ping the server');
     expect(manifest.commands.search).toBeDefined();
@@ -42,37 +42,37 @@ describe('generateManifest', () => {
     expect(manifest.commands.search.tags).toEqual(['search']);
   });
 
-  it('does not include run handler in manifest commands', () => {
-    const manifest = generateManifest(config);
+  it('does not include run handler in manifest commands', async () => {
+    const manifest = await generateManifest(config);
     expect((manifest.commands.ping as unknown as Record<string, unknown>).run).toBeUndefined();
   });
 
-  it('produces a stable SHA-256 checksum', () => {
-    const m1 = generateManifest(config, '2024-01-01T00:00:00Z');
-    const m2 = generateManifest(config, '2024-01-01T00:00:00Z');
+  it('produces a stable SHA-256 checksum', async () => {
+    const m1 = await generateManifest(config, '2024-01-01T00:00:00Z');
+    const m2 = await generateManifest(config, '2024-01-01T00:00:00Z');
     expect(m1.checksum).toBe(m2.checksum);
     expect(m1.checksum).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it('includes surf spec version', () => {
-    const manifest = generateManifest(config);
+  it('includes surf spec version', async () => {
+    const manifest = await generateManifest(config);
     expect(manifest.surf).toBeDefined();
     expect(typeof manifest.surf).toBe('string');
   });
 
-  it('includes version field from config', () => {
-    const manifest = generateManifest(config);
+  it('includes version field from config', async () => {
+    const manifest = await generateManifest(config);
     expect(manifest.version).toBe('1.0.0');
   });
 
-  it('includes updatedAt timestamp', () => {
-    const manifest = generateManifest(config);
+  it('includes updatedAt timestamp', async () => {
+    const manifest = await generateManifest(config);
     expect(manifest.updatedAt).toBeDefined();
     // Should be a valid ISO string
     expect(new Date(manifest.updatedAt).toISOString()).toBe(manifest.updatedAt);
   });
 
-  it('flattens nested command groups to dot notation', () => {
+  it('flattens nested command groups to dot notation', async () => {
     const nested: SurfConfig = {
       name: 'Nested',
       commands: {
@@ -82,7 +82,7 @@ describe('generateManifest', () => {
         },
       },
     };
-    const manifest = generateManifest(nested);
+    const manifest = await generateManifest(nested);
     expect(manifest.commands['cart.add']).toBeDefined();
     expect(manifest.commands['cart.remove']).toBeDefined();
     expect(manifest.commands['cart']).toBeUndefined();

@@ -10,8 +10,8 @@ describe('Auth', () => {
     return { valid: false, reason: 'Invalid token' };
   };
 
-  function createApp() {
-    return createSurf({
+  async function createApp() {
+    return await createSurf({
       name: 'AuthTest',
       authVerifier: verifier,
       commands: {
@@ -36,7 +36,7 @@ describe('Auth', () => {
 
   it('calls auth verifier with token', async () => {
     const spy = vi.fn(verifier);
-    const app = createSurf({
+    const app = await createSurf({
       name: 'AuthTest',
       authVerifier: spy,
       commands: {
@@ -53,7 +53,7 @@ describe('Auth', () => {
   });
 
   it('returns AUTH_REQUIRED when no token and command requires auth', async () => {
-    const app = createApp();
+    const app = await createApp();
     const result = await app.commands.execute('secret', {}, {});
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -62,7 +62,7 @@ describe('Auth', () => {
   });
 
   it('returns AUTH_FAILED when verifier returns false', async () => {
-    const app = createApp();
+    const app = await createApp();
     const result = await app.commands.execute('secret', {}, { auth: 'bad-token' });
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -71,7 +71,7 @@ describe('Auth', () => {
   });
 
   it('allows public commands without auth', async () => {
-    const app = createApp();
+    const app = await createApp();
     const result = await app.commands.execute('public', {}, {});
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -80,7 +80,7 @@ describe('Auth', () => {
   });
 
   it('passes claims to command context on valid auth', async () => {
-    const app = createApp();
+    const app = await createApp();
     const result = await app.commands.execute('secret', {}, { auth: 'valid-token' });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -89,7 +89,7 @@ describe('Auth', () => {
   });
 
   it('optional auth works without token', async () => {
-    const app = createApp();
+    const app = await createApp();
     const result = await app.commands.execute('optional', {}, {});
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -98,7 +98,7 @@ describe('Auth', () => {
   });
 
   it('optional auth works with valid token', async () => {
-    const app = createApp();
+    const app = await createApp();
     const result = await app.commands.execute('optional', {}, { auth: 'valid-token' });
     expect(result.ok).toBe(true);
     if (result.ok) {

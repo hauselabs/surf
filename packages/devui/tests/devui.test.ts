@@ -3,8 +3,8 @@ import { createSurf } from '@surfjs/core';
 import { createDevUI } from '../src/server.js';
 import type { DevUI } from '../src/server.js';
 
-function makeSurf() {
-  return createSurf({
+async function makeSurf() {
+  return await createSurf({
     name: 'Test Store',
     commands: {
       search: {
@@ -41,7 +41,7 @@ describe('createDevUI', () => {
   });
 
   it('returns an object with start, stop, and middleware methods', () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf);
     expect(devui).toBeDefined();
     expect(typeof devui.start).toBe('function');
@@ -50,21 +50,21 @@ describe('createDevUI', () => {
   });
 
   it('middleware() returns a function', () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf);
     const mw = devui.middleware();
     expect(typeof mw).toBe('function');
   });
 
   it('start() creates server on specified port', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14242 });
     const { url } = await devui.start();
     expect(url).toBe('http://localhost:14242/__surf');
   });
 
   it('serves HTML at /__surf with manifest data', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14243 });
     await devui.start();
 
@@ -81,7 +81,7 @@ describe('createDevUI', () => {
   });
 
   it('serves manifest JSON at /__surf/manifest', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14244 });
     await devui.start();
 
@@ -97,7 +97,7 @@ describe('createDevUI', () => {
   });
 
   it('redirects / to /__surf', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14245 });
     await devui.start();
 
@@ -107,7 +107,7 @@ describe('createDevUI', () => {
   });
 
   it('executes commands via /surf/execute', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14246 });
     await devui.start();
 
@@ -124,7 +124,7 @@ describe('createDevUI', () => {
   });
 
   it('returns AUTH_REQUIRED for auth commands without token', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14247 });
     await devui.start();
 
@@ -140,7 +140,7 @@ describe('createDevUI', () => {
   });
 
   it('executes auth commands with bearer token', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14248 });
     await devui.start();
 
@@ -159,7 +159,7 @@ describe('createDevUI', () => {
   });
 
   it('returns 404 for unknown paths', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14249 });
     await devui.start();
 
@@ -168,7 +168,7 @@ describe('createDevUI', () => {
   });
 
   it('supports custom mount path', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14250, path: '/__dev' });
     const { url } = await devui.start();
     expect(url).toBe('http://localhost:14250/__dev');
@@ -180,7 +180,7 @@ describe('createDevUI', () => {
   });
 
   it('stop() cleanly shuts down the server', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14251 });
     await devui.start();
 
@@ -196,7 +196,7 @@ describe('createDevUI', () => {
   });
 
   it('HTML includes keyboard shortcut handlers', async () => {
-    const surf = makeSurf();
+    const surf = await makeSurf();
     devui = createDevUI(surf, { port: 14252 });
     await devui.start();
 

@@ -34,7 +34,7 @@ export interface SurfInstance {
   readonly commands: CommandRegistry;
 }
 
-export function createSurf(config: SurfConfig): SurfInstance {
+export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   const validateReturns = config.strict === true || config.validateReturns === true;
   const registry = new CommandRegistry(config.commands, {
     validateReturns,
@@ -42,8 +42,8 @@ export function createSurf(config: SurfConfig): SurfInstance {
   });
   const sessionStore = new InMemorySessionStore();
   const eventBus = new EventBus(config.events);
-  const manifestData = generateManifest(config);
-  const manifestDataAuthed = generateManifest(config, { authenticated: true });
+  const manifestData = await generateManifest(config);
+  const manifestDataAuthed = await generateManifest(config, { authenticated: true });
 
   const middlewareStack: SurfMiddleware[] = [];
 

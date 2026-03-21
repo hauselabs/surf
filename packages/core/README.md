@@ -469,6 +469,14 @@ import {
 } from '@surfjs/core';
 ```
 
+## Edge Runtime Compatibility
+
+`@surfjs/core` is compatible with edge runtimes including **Cloudflare Workers**, **Vercel Edge Functions**, and **Deno Deploy**. The package uses the Web Crypto API (`crypto.subtle`) instead of Node.js `node:crypto`, and declares an `edge-light` export condition for bundler compatibility.
+
+**Caveats:**
+- `createSurf()` is async (returns `Promise<SurfInstance>`) due to Web Crypto's async digest API.
+- The WebSocket transport (`wsHandler()`) requires the `ws` npm package and is Node-only. In edge environments, use the HTTP transport or SSE instead. If you need WebSocket support in an edge runtime, provide a WS-compatible polyfill.
+
 ## License
 
 [MIT](../../LICENSE)

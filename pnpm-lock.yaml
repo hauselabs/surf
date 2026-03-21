@@ -146,6 +146,21 @@ importers:
         specifier: ^5.8.0
         version: 5.9.3
 
+  packages/zod:
+    devDependencies:
+      '@surfjs/core':
+        specifier: workspace:*
+        version: link:../core
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
+
 packages:
 
   '@babel/helper-string-parser@7.27.1':
@@ -1859,6 +1874,9 @@ packages:
       utf-8-validate:
         optional: true
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@babel/helper-string-parser@7.27.1': {}
@@ -3345,3 +3363,5 @@ snapshots:
       stackback: 0.0.2
 
   ws@8.19.0: {}
+
+  zod@3.25.76: {}

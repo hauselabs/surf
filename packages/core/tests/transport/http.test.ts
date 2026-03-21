@@ -31,8 +31,8 @@ function mockRes() {
   };
 }
 
-function createTestApp() {
-  return createSurf({
+async function createTestApp() {
+  return await createSurf({
     name: 'TestApp',
     version: '1.0.0',
     authVerifier: async (token) => {
@@ -65,7 +65,7 @@ function createTestApp() {
 
 describe('HTTP Transport', () => {
   it('manifest handler returns JSON with correct content-type', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.manifestHandler();
     const req = mockReq('GET', '/.well-known/surf.json');
     const res = mockRes();
@@ -79,7 +79,7 @@ describe('HTTP Transport', () => {
   });
 
   it('ETag/304 caching works', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.manifestHandler();
 
     // First request to get ETag
@@ -96,7 +96,7 @@ describe('HTTP Transport', () => {
   });
 
   it('execute handler processes commands', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
     const req = mockReq('POST', '/surf/execute', { command: 'ping' });
     const res = mockRes();
@@ -109,7 +109,7 @@ describe('HTTP Transport', () => {
   });
 
   it('execute handler returns 404 for unknown command', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
     const req = mockReq('POST', '/surf/execute', { command: 'nonexistent' });
     const res = mockRes();
@@ -122,7 +122,7 @@ describe('HTTP Transport', () => {
   });
 
   it('execute handler returns 400 for invalid params', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
     const req = mockReq('POST', '/surf/execute', { command: 'echo', params: {} });
     const res = mockRes();
@@ -135,7 +135,7 @@ describe('HTTP Transport', () => {
   });
 
   it('execute handler returns 401 for auth required', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
     const req = mockReq('POST', '/surf/execute', { command: 'secret' });
     const res = mockRes();
@@ -147,7 +147,7 @@ describe('HTTP Transport', () => {
   });
 
   it('execute handler returns 403 for bad auth', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
     const req = mockReq('POST', '/surf/execute', { command: 'secret' }, { authorization: 'Bearer invalid' });
     const res = mockRes();
@@ -159,7 +159,7 @@ describe('HTTP Transport', () => {
   });
 
   it('execute handler returns 429 for rate limited', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
 
     // First request passes
@@ -176,7 +176,7 @@ describe('HTTP Transport', () => {
   });
 
   it('CORS headers present', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const handler = app.httpHandler();
     const res = mockRes();
     await handler(mockReq('POST', '/surf/execute', { command: 'ping' }), res);
@@ -184,7 +184,7 @@ describe('HTTP Transport', () => {
   });
 
   it('middleware handler routes to correct endpoints', async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const mw = app.middleware();
 
     // Manifest

@@ -1,7 +1,7 @@
 import { createSurf } from '@surfjs/core'
 import { createDevUI } from './src/server.js'
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'Test Store',
   commands: {
     search: {

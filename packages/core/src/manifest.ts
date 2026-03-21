@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { SurfConfig, SurfManifest, ManifestCommand, CommandDefinition, ParamSchema, PaginationConfig } from './types.js';
 import { flattenCommands } from './namespace.js';
 
@@ -6,15 +5,20 @@ const SPEC_VERSION = '0.1.0';
 
 /**
  * Compute a deterministic SHA-256 checksum of the command schema.
+ * Uses the Web Crypto API (available in Node 18+, Cloudflare Workers,
+ * Vercel Edge Functions, and Deno Deploy).
  * Keys are sorted to ensure stability across restarts for identical configs.
  */
-function computeChecksum(commands: Record<string, ManifestCommand>): string {
+async function computeChecksum(commands: Record<string, ManifestCommand>): Promise<string> {
   const sortedKeys = Object.keys(commands).sort();
   const sorted: Record<string, ManifestCommand> = {};
   for (const key of sortedKeys) {
     sorted[key] = commands[key]!;
   }
-  return createHash('sha256').update(JSON.stringify(sorted)).digest('hex');
+  const encoded = new TextEncoder().encode(JSON.stringify(sorted));
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export interface ManifestOptions {
@@ -33,7 +37,7 @@ export interface ManifestOptions {
  * unless `options.authenticated` is true. They are still executable
  * when a valid auth token is provided.
  */
-export function generateManifest(config: SurfConfig, options?: ManifestOptions | string): SurfManifest {
+export async function generateManifest(config: SurfConfig, options?: ManifestOptions | string): Promise<SurfManifest> {
   // Backward compat: string arg = updatedAt
   const opts: ManifestOptions = typeof options === 'string' ? { updatedAt: options } : (options ?? {});
   const flat = flattenCommands(config.commands);
@@ -49,7 +53,7 @@ export function generateManifest(config: SurfConfig, options?: ManifestOptions |
     commands[name] = manifest;
   }
 
-  const checksum = computeChecksum(commands);
+  const checksum = await computeChecksum(commands);
 
   return {
     surf: SPEC_VERSION,

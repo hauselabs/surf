@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { createSurf } from '../src/surf.js';
+import type { SurfInstance } from '../src/surf.js';
 
 // Mock req/res for HTTP handlers
 function mockReq(method: string, url: string, body?: unknown, headers: Record<string, string> = {}) {
@@ -24,7 +25,10 @@ function mockRes() {
 }
 
 describe('Integration: full Surf flow', () => {
-  const app = createSurf({
+  let app: SurfInstance;
+
+  beforeAll(async () => {
+    app = await createSurf({
     name: 'ShopAPI',
     version: '2.0.0',
     description: 'E-commerce API',
@@ -60,6 +64,7 @@ describe('Integration: full Surf flow', () => {
         },
       },
     },
+  });
   });
 
   it('discover → manifest has all commands', async () => {
