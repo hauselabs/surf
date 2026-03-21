@@ -295,6 +295,16 @@ Commands specify auth requirements:
 - `"none"` — No authentication needed
 - `"required"` — Request MUST include valid auth
 - `"optional"` — Auth accepted but not required (may enable personalization)
+- `"hidden"` — Command is excluded from the manifest unless the request includes a valid auth token. When revealed, it appears as `"required"`. Agents without credentials cannot discover hidden commands.
+
+### 4.4 Hidden Command Discovery
+
+When `GET /.well-known/surf.json` is requested:
+
+- **Without auth:** Hidden commands are omitted entirely from the `commands` object
+- **With valid auth:** Hidden commands are included with `auth: "required"`
+
+The manifest `checksum` changes depending on which commands are included, ensuring agents can detect when their view of the API has changed after authenticating.
 
 ---
 

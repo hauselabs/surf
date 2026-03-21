@@ -744,7 +744,7 @@ When adding Surf to your website, commands should **only mirror actions that reg
 - ❌ Internal APIs, admin endpoints, database queries
 - ❌ Backend services not already exposed to end users
 
-**Rule of thumb:** If a user can't do it from the browser without special access, it shouldn't be an unauthenticated Surf command. Use `auth: 'required'` for any command that modifies data or performs actions on behalf of a user.
+**Rule of thumb:** If a user can't do it from the browser without special access, it shouldn't be an unauthenticated Surf command. Use `auth: 'required'` for any command that modifies data or performs actions on behalf of a user. For admin or internal tools, use `auth: 'hidden'` to keep them out of the public manifest entirely.
 
 ### Design for zero prior knowledge
 

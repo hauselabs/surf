@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.6 (2025-03-21)
+
+### Bug Fixes
+- **CLI:** Error objects now render properly instead of `[object Object]`
+- **CLI:** Auth-required commands fail fast before prompting for parameters
+- **Publish:** Fixed `workspace:*` dependency specifiers that broke `npm install`
+
+### Features
+- **Hidden commands** — `auth: 'hidden'` excludes commands from the public manifest. Only revealed when a valid Bearer token is provided. Agents without credentials cannot discover hidden commands.
+- **Auth levels table:** `none` | `required` | `optional` | `hidden`
+
 ## 0.1.0 (2025-03-20)
 
 Initial release. 🏄
