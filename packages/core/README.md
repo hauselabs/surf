@@ -78,6 +78,7 @@ Creates a Surf instance with all transports and middleware configured.
 interface SurfConfig {
   name: string;                          // Service name (required)
   description?: string;
+  about?: string;                        // Longer context for agents (site purpose, content, tone)
   version?: string;
   baseUrl?: string;
   auth?: AuthConfig;                     // { type: 'bearer' | 'apiKey' | 'oauth2' | 'none' }
@@ -118,12 +119,19 @@ interface CommandDefinition<TParams = Record<string, unknown>, TResult = unknown
   description: string;                    // Required — shown to agents
   params?: Record<string, ParamSchema>;
   returns?: ParamSchema | TypeRef;
-  tags?: string[];
+  tags?: string[];                        // Categorize: ['read-only', 'content']
   auth?: 'none' | 'required' | 'optional';
   hints?: CommandHints;
   stream?: boolean;                       // Enable SSE streaming
-  rateLimit?: RateLimitConfig;           // Per-command rate limit
+  rateLimit?: RateLimitConfig;           // Per-command rate limit (also shown in manifest)
+  examples?: CommandExample[];           // Sample request/response for agents
   run: CommandHandler<TParams, TResult>;
+}
+
+interface CommandExample {
+  title?: string;                         // Human-readable label
+  params: Record<string, unknown>;        // Example input
+  result?: unknown;                       // Example output
 }
 ```
 
@@ -239,8 +247,9 @@ const surf = createSurf({
   name: 'My App',
   commands: {
     cart: {
-      add: { description: 'Add to cart', run: async (p) => {} },
-      remove: { description: 'Remove', run: async (p) => {} },
+      _description: 'Shopping cart management',  // Namespace description (shown to agents)
+      add: { description: 'Add item to cart', run: async (p) => {} },
+      remove: { description: 'Remove item', run: async (p) => {} },
     },
   },
 });
@@ -373,6 +382,7 @@ validateResult(result, command.returns);
 import {
   SurfError,
   unknownCommand,
+  notFound,
   invalidParams,
   authRequired,
   authFailed,
@@ -381,6 +391,9 @@ import {
   internalError,
   notSupported,
 } from '@surfjs/core';
+
+throw notFound('article', 'my-slug');
+// → SurfError { code: 'NOT_FOUND', message: 'article not found: my-slug' }
 
 throw unknownCommand('nonexistent');
 // → SurfError { code: 'UNKNOWN_COMMAND', message: '...', httpStatus: 404 }
