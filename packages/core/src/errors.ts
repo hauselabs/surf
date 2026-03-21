@@ -49,8 +49,8 @@ export function authFailed(reason?: string): SurfError {
   return new SurfError('AUTH_FAILED', reason ?? 'Authentication failed');
 }
 
-export function sessionExpired(sessionId: string): SurfError {
-  return new SurfError('SESSION_EXPIRED', `Session expired: ${sessionId}`, { sessionId });
+export function sessionExpired(_sessionId?: string): SurfError {
+  return new SurfError('SESSION_EXPIRED', 'Session expired or not found');
 }
 
 export function rateLimited(retryAfterMs?: number): SurfError {

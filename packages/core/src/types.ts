@@ -256,6 +256,8 @@ export interface SurfConfig {
   validateReturns?: boolean;
   /** Strict mode — enables validateReturns and other strict checks. */
   strict?: boolean;
+  /** Enable debug mode — exposes detailed error messages. Disable in production. */
+  debug?: boolean;
 }
 
 // ─── Transport Types ────────────────────────────────────────────────────────

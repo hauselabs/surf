@@ -36,9 +36,11 @@ export interface SurfInstance {
 
 export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   const validateReturns = config.strict === true || config.validateReturns === true;
+  const debug = config.debug === true;
   const registry = new CommandRegistry(config.commands, {
     validateReturns,
     globalRateLimit: config.rateLimit,
+    debug,
   });
   const sessionStore = new InMemorySessionStore();
   const eventBus = new EventBus(config.events);

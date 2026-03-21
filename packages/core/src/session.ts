@@ -1,9 +1,8 @@
 import type { Session, SessionStore } from './types.js';
 import { sessionExpired } from './errors.js';
 
-let idCounter = 0;
 function generateId(): string {
-  return `sess_${Date.now().toString(36)}_${(++idCounter).toString(36)}`;
+  return `sess_${crypto.randomUUID()}`;
 }
 
 /**

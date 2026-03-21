@@ -9,6 +9,8 @@ import { RateLimiter } from './ratelimit.js';
 export interface CommandRegistryOptions {
   validateReturns?: boolean;
   globalRateLimit?: RateLimitConfig;
+  /** When false (default in production), internal error messages are sanitized. Set true for development. */
+  debug?: boolean;
 }
 
 /**
@@ -146,7 +148,10 @@ export class CommandRegistry {
       if (e instanceof SurfError) {
         return { ok: false, requestId: context.requestId, error: e.toJSON() };
       }
-      const err = internalError(e instanceof Error ? e.message : 'Unknown error');
+      const message = this.options.debug
+        ? (e instanceof Error ? e.message : 'Unknown error')
+        : 'Internal server error';
+      const err = internalError(message);
       return { ok: false, requestId: context.requestId, error: err.toJSON() };
     }
   }

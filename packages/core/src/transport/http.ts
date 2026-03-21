@@ -85,10 +85,8 @@ export function createManifestHandler(
         } catch {
           // Invalid token — serve public manifest, no error
         }
-      } else if (token && !authVerifier) {
-        // No verifier but token present — trust the token (site has no auth verification)
-        useAuthed = true;
       }
+      // Fail-closed: no authVerifier = no hidden command exposure, regardless of token
     }
 
     const body = useAuthed ? authedBody! : publicBody;

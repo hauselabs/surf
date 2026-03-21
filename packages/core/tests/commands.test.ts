@@ -147,6 +147,22 @@ describe('CommandRegistry', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error.code).toBe('INTERNAL_ERROR');
+      expect(result.error.message).toBe('Internal server error');
+    }
+  });
+
+  it('exposes error details in debug mode', async () => {
+    const registry = new CommandRegistry({
+      fail: {
+        description: 'Fail',
+        run: async () => { throw new Error('boom'); },
+      },
+    }, { debug: true });
+
+    const result = await registry.execute('fail', {}, {});
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('INTERNAL_ERROR');
       expect(result.error.message).toBe('boom');
     }
   });

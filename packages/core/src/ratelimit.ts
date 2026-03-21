@@ -11,6 +11,8 @@ interface WindowEntry {
  */
 export class RateLimiter {
   private readonly windows = new Map<string, WindowEntry>();
+  private lastCleanup = Date.now();
+  private static readonly CLEANUP_INTERVAL_MS = 60_000;
 
   /**
    * Check if a request is allowed under the given config and key.
@@ -18,6 +20,7 @@ export class RateLimiter {
    * Returns ms until the oldest entry expires (for Retry-After).
    */
   check(config: RateLimitConfig, key: string): void {
+    this.maybeCleanup(config.windowMs);
     const { windowMs, maxRequests } = config;
     const now = Date.now();
     const bucketKey = key;
@@ -38,6 +41,22 @@ export class RateLimiter {
     }
 
     entry.timestamps.push(now);
+  }
+
+  /**
+   * Periodically evict stale entries to prevent memory leaks.
+   */
+  private maybeCleanup(windowMs: number): void {
+    const now = Date.now();
+    if (now - this.lastCleanup < RateLimiter.CLEANUP_INTERVAL_MS) return;
+    this.lastCleanup = now;
+
+    for (const [key, entry] of this.windows) {
+      entry.timestamps = entry.timestamps.filter((t) => now - t < windowMs);
+      if (entry.timestamps.length === 0) {
+        this.windows.delete(key);
+      }
+    }
   }
 
   /**
