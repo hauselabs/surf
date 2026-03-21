@@ -40,7 +40,7 @@ describe('createDevUI', () => {
     }
   });
 
-  it('returns an object with start, stop, and middleware methods', () => {
+  it('returns an object with start, stop, and middleware methods', async () => {
     const surf = await makeSurf();
     devui = createDevUI(surf);
     expect(devui).toBeDefined();
@@ -49,7 +49,7 @@ describe('createDevUI', () => {
     expect(typeof devui.middleware).toBe('function');
   });
 
-  it('middleware() returns a function', () => {
+  it('middleware() returns a function', async () => {
     const surf = await makeSurf();
     devui = createDevUI(surf);
     const mw = devui.middleware();
