@@ -120,4 +120,4 @@ export { CommandRegistry } from './commands.js';
 export { InMemorySessionStore } from './session.js';
 export { EventBus } from './events.js';
 export type { EventScope, ScopedEventDefinition } from './events.js';
-export { generateManifest } from './manifest.js';
+export { generateManifest, type ManifestOptions } from './manifest.js';

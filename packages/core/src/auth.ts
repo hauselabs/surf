@@ -40,7 +40,7 @@ export function createAuthMiddleware(
 
     const token = ctx.context.auth;
 
-    if (authLevel === 'required') {
+    if (authLevel === 'required' || authLevel === 'hidden') {
       if (!token) {
         const err = authRequired(ctx.command);
         ctx.error = { ok: false, requestId: ctx.context.requestId, error: err.toJSON() };

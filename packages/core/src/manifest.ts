@@ -17,17 +17,36 @@ function computeChecksum(commands: Record<string, ManifestCommand>): string {
   return createHash('sha256').update(JSON.stringify(sorted)).digest('hex');
 }
 
+export interface ManifestOptions {
+  /** When set, includes commands with `auth: 'hidden'` in the manifest. */
+  authenticated?: boolean;
+  /** Override the updatedAt timestamp. */
+  updatedAt?: string;
+}
+
 /**
  * Generate a Surf manifest from a config.
  * Flattens nested command groups to dot-notation keys.
  * Includes a deterministic checksum and updatedAt timestamp.
+ *
+ * Commands with `auth: 'hidden'` are excluded from the manifest
+ * unless `options.authenticated` is true. They are still executable
+ * when a valid auth token is provided.
  */
-export function generateManifest(config: SurfConfig, updatedAt?: string): SurfManifest {
+export function generateManifest(config: SurfConfig, options?: ManifestOptions | string): SurfManifest {
+  // Backward compat: string arg = updatedAt
+  const opts: ManifestOptions = typeof options === 'string' ? { updatedAt: options } : (options ?? {});
   const flat = flattenCommands(config.commands);
   const commands: Record<string, ManifestCommand> = {};
 
   for (const [name, def] of Object.entries(flat)) {
-    commands[name] = stripHandler(def);
+    // Filter out hidden commands when not authenticated
+    if (def.auth === 'hidden' && !opts.authenticated) continue;
+    const manifest = stripHandler(def);
+    // Expose hidden commands as 'required' in the authenticated manifest —
+    // agents don't need to know the 'hidden' distinction once they can see them
+    if (manifest.auth === 'hidden') manifest.auth = 'required';
+    commands[name] = manifest;
   }
 
   const checksum = computeChecksum(commands);
@@ -44,7 +63,7 @@ export function generateManifest(config: SurfConfig, updatedAt?: string): SurfMa
     ...(config.events ? { events: config.events } : {}),
     ...(config.types ? { types: config.types } : {}),
     checksum,
-    updatedAt: updatedAt ?? new Date().toISOString(),
+    updatedAt: opts.updatedAt ?? new Date().toISOString(),
   };
 }
 

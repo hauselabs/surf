@@ -57,18 +57,49 @@ function extractIp(headers: Record<string, string | string[] | undefined>): stri
 /**
  * Creates the manifest HTTP handler (GET /.well-known/surf.json).
  * Supports ETag / 304 Not Modified.
+ *
+ * When `authedManifest` is provided, requests with a valid Bearer token
+ * receive the authenticated manifest (which includes `auth: 'hidden'` commands).
+ * The auth verifier is used to validate the token — if it fails or is absent,
+ * the public manifest is served instead (no error).
  */
-export function createManifestHandler(manifest: SurfManifest): HttpHandler {
-  const body = JSON.stringify(manifest, null, 2);
-  const etag = `"${manifest.checksum}"`;
+export function createManifestHandler(
+  manifest: SurfManifest,
+  authedManifest?: SurfManifest,
+  authVerifier?: (token: string) => unknown,
+): HttpHandler {
+  const publicBody = JSON.stringify(manifest, null, 2);
+  const publicEtag = `"${manifest.checksum}"`;
+  const authedBody = authedManifest ? JSON.stringify(authedManifest, null, 2) : null;
+  const authedEtag = authedManifest ? `"${authedManifest.checksum}"` : null;
 
-  return (req, res) => {
+  return async (req, res) => {
+    // Determine if this request should see hidden commands
+    let useAuthed = false;
+    if (authedBody && authedEtag) {
+      const token = extractAuth(req.headers);
+      if (token && authVerifier) {
+        try {
+          const result = await authVerifier(token);
+          useAuthed = result !== false && result !== null && result !== undefined;
+        } catch {
+          // Invalid token — serve public manifest, no error
+        }
+      } else if (token && !authVerifier) {
+        // No verifier but token present — trust the token (site has no auth verification)
+        useAuthed = true;
+      }
+    }
+
+    const body = useAuthed ? authedBody! : publicBody;
+    const etag = useAuthed ? authedEtag! : publicEtag;
+
     const ifNoneMatch = getHeader(req.headers, 'if-none-match');
     if (ifNoneMatch && ifNoneMatch === etag) {
       res.writeHead(304, {
         'ETag': etag,
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=300',
+        'Cache-Control': useAuthed ? 'private, max-age=300' : 'public, max-age=300',
       });
       res.end();
       return;
@@ -77,7 +108,7 @@ export function createManifestHandler(manifest: SurfManifest): HttpHandler {
     res.writeHead(200, {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': useAuthed ? 'private, max-age=300' : 'public, max-age=300',
       'ETag': etag,
     });
     res.end(body);
@@ -235,8 +266,9 @@ export function createMiddleware(
   executeHandler: HttpHandler,
   sessionHandlers: { start: HttpHandler; end: HttpHandler },
   pipelineOptions?: { registry: CommandRegistry; sessions: InMemorySessionStore; getAuth: (h: Record<string, string | string[] | undefined>) => string | undefined },
+  manifestOptions?: { authedManifest?: SurfManifest; authVerifier?: (token: string) => unknown },
 ): HttpHandler {
-  const manifestHandler = createManifestHandler(manifest);
+  const manifestHandler = createManifestHandler(manifest, manifestOptions?.authedManifest, manifestOptions?.authVerifier);
 
   return async (req, res) => {
     const url = req.url ?? '';

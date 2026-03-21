@@ -43,6 +43,7 @@ export function createSurf(config: SurfConfig): SurfInstance {
   const sessionStore = new InMemorySessionStore();
   const eventBus = new EventBus(config.events);
   const manifestData = generateManifest(config);
+  const manifestDataAuthed = generateManifest(config, { authenticated: true });
 
   const middlewareStack: SurfMiddleware[] = [];
 
@@ -80,11 +81,19 @@ export function createSurf(config: SurfConfig): SurfInstance {
       registry.setMiddleware(middlewareStack);
     },
 
-    manifest() {
-      return manifestData;
+    manifest(options?: { authenticated?: boolean }) {
+      return options?.authenticated ? manifestDataAuthed : manifestData;
     },
 
     manifestHandler() {
+      // If there are hidden commands, pass both manifests + verifier
+      const hasHidden = Object.keys(manifestDataAuthed.commands).length > Object.keys(manifestData.commands).length;
+      if (hasHidden) {
+        const verifier = config.authVerifier
+          ? async (token: string) => { const r = await config.authVerifier!(token, '__manifest__'); return r.valid; }
+          : undefined;
+        return createManifestHandler(manifestData, manifestDataAuthed, verifier);
+      }
       return createManifestHandler(manifestData);
     },
 
@@ -93,7 +102,14 @@ export function createSurf(config: SurfConfig): SurfInstance {
     },
 
     middleware() {
-      return createMiddleware(manifestData, executeHandler, sessionHandlers, { registry, sessions: sessionStore, getAuth });
+      const hasHidden = Object.keys(manifestDataAuthed.commands).length > Object.keys(manifestData.commands).length;
+      const manifestOpts = hasHidden ? {
+        authedManifest: manifestDataAuthed,
+        authVerifier: config.authVerifier
+          ? async (token: string) => { const r = await config.authVerifier!(token, '__manifest__'); return r.valid; }
+          : undefined,
+      } : undefined;
+      return createMiddleware(manifestData, executeHandler, sessionHandlers, { registry, sessions: sessionStore, getAuth }, manifestOpts);
     },
 
     wsHandler(server) {

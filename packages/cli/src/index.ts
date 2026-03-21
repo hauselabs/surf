@@ -315,7 +315,7 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
   }
 
   // 3. Fail fast on auth-required commands without token
-  if (cmdSchema.auth === 'required' && !opts.auth) {
+  if ((cmdSchema.auth === 'required' || cmdSchema.auth === 'hidden') && !opts.auth) {
     const msg = `${commandName} requires authentication. Provide a token with --auth <token>`;
     if (opts.json) {
       console.log(JSON.stringify({ ok: false, error: msg }));
