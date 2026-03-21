@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/next",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Next.js adapter for Surf.js — App Router + Pages Router support",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@surfjs/core": ">=0.1.0",
+    "@surfjs/core": ">=0.2.0",
     "next": ">=13.0.0"
   },
   "devDependencies": {

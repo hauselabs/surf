@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.0 (2026-03-21)
+
+### Features — Overnight Queue (Phases 1–8)
+
+- **Phase 1: Streaming** — SSE streaming support for commands via `stream: true` and `ctx.emit()`
+- **Phase 2: Sessions** — Stateful sessions with `InMemorySessionStore`, `SessionStore` interface, and session middleware
+- **Phase 3: Rate Limiting** — Global and per-command rate limiting with `RateLimiter` and configurable `keyBy` strategies
+- **Phase 4: Validation** — `validateParams()` and `validateResult()` with strict mode, enum support, and nested object/array validation
+- **Phase 5: Pagination** — Cursor and offset pagination with `paginatedResult()` helper and auto-injected manifest params
+- **Phase 6: Pipeline** — Multi-command pipeline execution with `$prev`/`$alias` references and `continueOnError`
+- **Phase 7: Framework Adapters** — First-class adapters for Fastify (`fastifyPlugin`) and Hono (`honoApp`, `honoMiddleware`); `createSurf` is now async
+- **Phase 8: Scoped Auth** — `requiredScopes` on commands, `scopedVerifier()` helper, scopes in `AuthResult` and `ExecutionContext`
+
+### Breaking Changes
+
+- `createSurf()` is now **async** (returns `Promise<SurfInstance>`) — Phase 7
+
 ## 0.1.6 (2025-03-21)
 
 ### Bug Fixes
