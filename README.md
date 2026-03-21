@@ -719,6 +719,19 @@ The main entry point. Returns a `SurfInstance`.
 
 ## Security
 
+### ⚠️ Only expose what's already public
+
+When adding Surf to your website, commands should **only mirror actions that regular users can already perform** through the public UI:
+
+- ✅ Search products, browse content, read public data
+- ✅ Add to cart, submit forms (with auth)
+- ❌ Internal APIs, admin endpoints, database queries
+- ❌ Backend services not already exposed to end users
+
+**Rule of thumb:** If a user can't do it from the browser without special access, it shouldn't be an unauthenticated Surf command. Use `auth: 'required'` for any command that modifies data or performs actions on behalf of a user.
+
+### Built-in protections
+
 Surf includes multiple layers of security by default:
 
 - **Session isolation** — Session state is isolated per session ID. One user cannot access another's state.
