@@ -36,6 +36,7 @@ export function generateManifest(config: SurfConfig, updatedAt?: string): SurfMa
     surf: SPEC_VERSION,
     name: config.name,
     ...(config.description ? { description: config.description } : {}),
+    ...(config.about ? { about: config.about } : {}),
     ...(config.version ? { version: config.version } : {}),
     ...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
     ...(config.auth ? { auth: config.auth } : {}),
@@ -57,6 +58,8 @@ function stripHandler(def: CommandDefinition): ManifestCommand {
   if (def.tags) result.tags = def.tags;
   if (def.auth) result.auth = def.auth;
   if (def.hints) result.hints = def.hints;
+  if (def.examples) result.examples = def.examples;
+  if (def.rateLimit) result.rateLimit = { windowMs: def.rateLimit.windowMs, maxRequests: def.rateLimit.maxRequests };
 
   return result;
 }

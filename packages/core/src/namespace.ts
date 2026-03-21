@@ -56,10 +56,12 @@ export function flattenCommands(
 
   function walk(obj: Record<string, CommandDefinition | CommandGroup>, prefix: string): void {
     for (const [key, value] of Object.entries(obj)) {
+      // Skip namespace metadata keys
+      if (key === '_description') continue;
       const fullKey = prefix ? `${prefix}.${key}` : key;
       if (isCommandDefinition(value)) {
         result[fullKey] = value;
-      } else {
+      } else if (typeof value === 'object' && value !== null) {
         walk(value as Record<string, CommandDefinition | CommandGroup>, fullKey);
       }
     }

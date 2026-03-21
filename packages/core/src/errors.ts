@@ -30,6 +30,10 @@ export function unknownCommand(command: string): SurfError {
   return new SurfError('UNKNOWN_COMMAND', `Unknown command: ${command}`, { command });
 }
 
+export function notFound(resource: string, id?: string): SurfError {
+  return new SurfError('NOT_FOUND', id ? `${resource} not found: ${id}` : `${resource} not found`, { resource, ...(id ? { id } : {}) });
+}
+
 export function invalidParams(message: string, details?: Record<string, unknown>): SurfError {
   return new SurfError('INVALID_PARAMS', message, details);
 }

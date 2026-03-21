@@ -114,14 +114,27 @@ export interface CommandDefinition<TParams = Record<string, unknown>, TResult = 
   stream?: boolean;
   /** Per-command rate limiting. */
   rateLimit?: RateLimitConfig;
+  /** Example request/response pairs shown in manifest — dramatically improves agent accuracy. */
+  examples?: CommandExample[];
   run: CommandHandler<TParams, TResult>;
+}
+
+/** A concrete example of calling a command, shown to agents in the manifest. */
+export interface CommandExample {
+  /** Human-readable label for this example. */
+  title?: string;
+  params: Record<string, unknown>;
+  result?: unknown;
 }
 
 /**
  * A recursive group of commands for dot-notation namespacing.
+ * Optionally includes a `_description` for the namespace itself.
  */
 export interface CommandGroup {
-  [key: string]: CommandDefinition | CommandGroup;
+  /** Description of this namespace group (shown to agents). Use the key `_description`. */
+  _description?: string;
+  [key: string]: CommandDefinition | CommandGroup | string | undefined;
 }
 
 // ─── Auth Types ─────────────────────────────────────────────────────────────
@@ -149,12 +162,16 @@ export interface ManifestCommand {
   tags?: string[];
   auth?: 'none' | 'required' | 'optional';
   hints?: CommandHints;
+  examples?: CommandExample[];
+  rateLimit?: { windowMs: number; maxRequests: number };
 }
 
 export interface SurfManifest {
   surf: string;
   name: string;
   description?: string;
+  /** Longer human/agent-readable context about the site — what it does, what kind of content, editorial tone. */
+  about?: string;
   version?: string;
   baseUrl?: string;
   auth?: AuthConfig;
@@ -177,6 +194,8 @@ export interface SurfConfig {
   /** Site/service name — shown in the manifest and DevUI. */
   name: string;
   description?: string;
+  /** Longer context about your site for agents — what it does, content types, editorial tone. */
+  about?: string;
   version?: string;
   baseUrl?: string;
   auth?: AuthConfig;
@@ -328,6 +347,7 @@ export interface SessionStore {
  * | Code | HTTP | Meaning |
  * |------|------|---------|
  * | `UNKNOWN_COMMAND` | 404 | Command name not found in manifest |
+ * | `NOT_FOUND` | 404 | Command exists but the requested resource was not found |
  * | `INVALID_PARAMS` | 400 | Missing required param, wrong type, or invalid value |
  * | `AUTH_REQUIRED` | 401 | Command requires authentication but none was provided |
  * | `AUTH_FAILED` | 403 | Token/key was provided but is invalid or expired |
@@ -338,6 +358,7 @@ export interface SessionStore {
  */
 export type SurfErrorCode =
   | 'UNKNOWN_COMMAND'
+  | 'NOT_FOUND'
   | 'INVALID_PARAMS'
   | 'AUTH_REQUIRED'
   | 'AUTH_FAILED'

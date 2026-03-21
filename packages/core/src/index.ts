@@ -13,6 +13,7 @@ export type {
 
   // Commands
   CommandDefinition,
+  CommandExample,
   CommandHandler,
   CommandHints,
   ExecutionContext,
@@ -79,6 +80,7 @@ export {
   rateLimited,
   internalError,
   notSupported,
+  notFound,
 } from './errors.js';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────

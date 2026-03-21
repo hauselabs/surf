@@ -86,7 +86,8 @@ function checkType(name: string, value: unknown, def: ParamSchema): string | nul
   const actual = getParamType(value);
 
   if (actual !== expected) {
-    return `Parameter '${name}' must be of type '${expected}', got '${actual}'`;
+    const preview = typeof value === 'string' ? `"${value.slice(0, 50)}"` : String(value);
+    return `Parameter '${name}' expected ${expected}, got ${actual} (${preview})`;
   }
 
   return null;
