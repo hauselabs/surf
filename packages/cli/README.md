@@ -15,11 +15,28 @@ A command-line tool for working with the [Surf](https://surf.codes) protocol. Di
 
 Part of the **[Surf.js](https://github.com/hauselabs/surf)** ecosystem.
 
+## Installation
+
+**Global install** (recommended — gives you the `surf` command everywhere):
+
 ```bash
 npm install -g @surfjs/cli
-# or use directly
-npx surf inspect https://example.com
 ```
+
+**Run without installing** (via npx):
+
+```bash
+npx @surfjs/cli inspect https://example.com
+```
+
+After installing globally, verify it works:
+
+```bash
+surf --help
+```
+
+> **Note:** If `surf` is not found after global install, your npm global bin directory may not be in your PATH.
+> Run `npm bin -g` to find it, then add it to your shell profile.
 
 ## Commands
 
