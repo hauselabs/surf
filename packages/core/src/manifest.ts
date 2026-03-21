@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { SurfConfig, SurfManifest, ManifestCommand, CommandDefinition } from './types.js';
+import type { SurfConfig, SurfManifest, ManifestCommand, CommandDefinition, ParamSchema, PaginationConfig } from './types.js';
 import { flattenCommands } from './namespace.js';
 
 const SPEC_VERSION = '0.1.0';
@@ -67,18 +67,55 @@ export function generateManifest(config: SurfConfig, options?: ManifestOptions |
   };
 }
 
+/**
+ * Build standard pagination params based on the pagination config style.
+ */
+function buildPaginationParams(config: true | PaginationConfig): Record<string, ParamSchema> {
+  const resolved: PaginationConfig = config === true ? {} : config;
+  const style = resolved.style ?? 'cursor';
+  const params: Record<string, ParamSchema> = {};
+
+  if (style === 'cursor') {
+    params['cursor'] = {
+      type: 'string',
+      description: 'Opaque cursor from a previous response\'s nextCursor.',
+    };
+  } else {
+    params['offset'] = {
+      type: 'number',
+      description: 'Zero-based index to start from.',
+      default: 0,
+    };
+  }
+
+  params['limit'] = {
+    type: 'number',
+    description: `Maximum number of items to return.${resolved.maxLimit ? ` Max: ${resolved.maxLimit}.` : ''}`,
+    ...(resolved.defaultLimit != null ? { default: resolved.defaultLimit } : {}),
+  };
+
+  return params;
+}
+
 function stripHandler(def: CommandDefinition): ManifestCommand {
   const result: ManifestCommand = {
     description: def.description,
   };
 
-  if (def.params) result.params = def.params;
+  if (def.params) result.params = { ...def.params };
   if (def.returns) result.returns = def.returns;
   if (def.tags) result.tags = def.tags;
   if (def.auth) result.auth = def.auth;
   if (def.hints) result.hints = def.hints;
   if (def.examples) result.examples = def.examples;
   if (def.rateLimit) result.rateLimit = { windowMs: def.rateLimit.windowMs, maxRequests: def.rateLimit.maxRequests };
+
+  // Pagination: auto-inject params and set paginated flag
+  if (def.paginated) {
+    const paginationParams = buildPaginationParams(def.paginated);
+    result.params = { ...(result.params ?? {}), ...paginationParams };
+    result.paginated = true;
+  }
 
   return result;
 }

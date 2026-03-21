@@ -74,7 +74,7 @@ Allow: /.well-known/surf.json
         "type": "object",
         "properties": {}
       },
-      "auth": "none | required | optional",
+      "auth": "none | required | optional | hidden",
       "tags": ["category"],
       "hints": {
         "idempotent": true,
@@ -329,6 +329,106 @@ Commands specify auth requirements:
 - Manifest: `application/json`
 - Execute request/response: `application/json`
 - Streaming: `text/event-stream`
+
+---
+
+## 8. Pagination
+
+Commands that return collections SHOULD support pagination. Surf defines a standard pagination convention that agents can detect and iterate automatically.
+
+### 8.1 Declaring Pagination
+
+A command is paginated when its manifest entry includes `"paginated": true`:
+
+```json
+{
+  "commands": {
+    "articles.list": {
+      "description": "List published articles",
+      "paginated": true,
+      "params": { ... },
+      "returns": { ... }
+    }
+  }
+}
+```
+
+When a command is declared paginated, the runtime automatically injects standard pagination parameters into its manifest params (see §8.2).
+
+### 8.2 Pagination Parameters
+
+Surf supports two pagination styles:
+
+#### Cursor-based (preferred)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cursor` | `string` | Opaque cursor from a previous response's `nextCursor` |
+| `limit` | `number` | Maximum number of items to return |
+
+Cursor-based pagination is the default and preferred style. Cursors are opaque strings — agents MUST NOT interpret or construct them.
+
+#### Offset-based
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `offset` | `number` | Zero-based index to start from |
+| `limit` | `number` | Maximum number of items to return |
+
+Offset-based pagination is supported for APIs where cursors are impractical.
+
+### 8.3 Response Envelope
+
+Paginated commands MUST return a standard envelope:
+
+```json
+{
+  "items": [ ... ],
+  "nextCursor": "opaque-string",
+  "hasMore": true,
+  "total": 42
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `items` | `array` | Yes | The page of results |
+| `nextCursor` | `string \| null` | No | Cursor for the next page (`null` or absent = last page) |
+| `hasMore` | `boolean` | Yes | Whether more results exist beyond this page |
+| `total` | `number` | No | Total number of items across all pages (if known) |
+
+### 8.4 Pagination Config
+
+Command authors MAY provide pagination configuration:
+
+```json
+{
+  "paginated": {
+    "defaultLimit": 20,
+    "maxLimit": 100,
+    "style": "cursor"
+  }
+}
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultLimit` | `number` | `20` | Default page size when `limit` is omitted |
+| `maxLimit` | `number` | `100` | Maximum allowed `limit` value |
+| `style` | `"cursor" \| "offset"` | `"cursor"` | Which pagination style this command uses |
+
+When `paginated` is `true` (boolean), defaults are used.
+
+### 8.5 Agent Behavior
+
+Agents iterating over paginated commands SHOULD:
+
+1. Call the command without `cursor`/`offset` to get the first page
+2. Check `hasMore` in the response
+3. If `hasMore` is `true`, call again with the returned `nextCursor` (or incremented `offset`)
+4. Repeat until `hasMore` is `false` or `nextCursor` is `null`/absent
+
+Agents SHOULD respect `maxLimit` and MUST NOT assume a specific page size.
 
 ---
 

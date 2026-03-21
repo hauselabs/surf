@@ -66,6 +66,11 @@ export type {
 
   // Rate limiting
   RateLimitConfig,
+
+  // Pagination
+  PaginatedParams,
+  PaginatedResult,
+  PaginationConfig,
 } from './types.js';
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
@@ -113,6 +118,10 @@ export { executePipeline } from './transport/pipeline.js';
 
 export { fastifyPlugin } from './adapters/fastify.js';
 export { honoApp, honoMiddleware } from './adapters/hono.js';
+
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+export { paginatedResult } from './pagination.js';
 
 // ─── Internal utilities (for advanced use) ────────────────────────────────────
 

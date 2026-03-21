@@ -116,6 +116,8 @@ export interface CommandDefinition<TParams = Record<string, unknown>, TResult = 
   rateLimit?: RateLimitConfig;
   /** Example request/response pairs shown in manifest — dramatically improves agent accuracy. */
   examples?: CommandExample[];
+  /** Enable pagination for this command. `true` uses defaults; object configures behavior. */
+  paginated?: boolean | PaginationConfig;
   run: CommandHandler<TParams, TResult>;
 }
 
@@ -135,6 +137,40 @@ export interface CommandGroup {
   /** Description of this namespace group (shown to agents). Use the key `_description`. */
   _description?: string;
   [key: string]: CommandDefinition | CommandGroup | string | undefined;
+}
+
+// ─── Pagination Types ────────────────────────────────────────────────────────
+
+/** Standard pagination parameters accepted by paginated commands. */
+export interface PaginatedParams {
+  /** Opaque cursor from a previous response's `nextCursor`. */
+  cursor?: string;
+  /** Maximum number of items to return. */
+  limit?: number;
+  /** Zero-based offset for offset-style pagination. */
+  offset?: number;
+}
+
+/** Standard response envelope for paginated commands. */
+export interface PaginatedResult<T = unknown> {
+  /** The page of results. */
+  items: T[];
+  /** Opaque cursor for the next page. `null` or absent means last page. */
+  nextCursor?: string | null;
+  /** Whether more results exist beyond this page. */
+  hasMore: boolean;
+  /** Total number of items across all pages (if known). */
+  total?: number;
+}
+
+/** Configuration for pagination behavior on a command. */
+export interface PaginationConfig {
+  /** Default page size when `limit` is omitted. Default: `20`. */
+  defaultLimit?: number;
+  /** Maximum allowed `limit` value. Default: `100`. */
+  maxLimit?: number;
+  /** Pagination style. Default: `'cursor'`. */
+  style?: 'cursor' | 'offset';
 }
 
 // ─── Auth Types ─────────────────────────────────────────────────────────────
@@ -164,6 +200,8 @@ export interface ManifestCommand {
   hints?: CommandHints;
   examples?: CommandExample[];
   rateLimit?: { windowMs: number; maxRequests: number };
+  /** Whether this command supports pagination. Agents can detect this to auto-iterate. */
+  paginated?: boolean;
 }
 
 export interface SurfManifest {

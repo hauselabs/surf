@@ -228,7 +228,7 @@ The core building block. Each command has a description, typed parameters, optio
   },
   returns: { type: 'object', properties: { id: { type: 'string' } } },
   tags: ['search', 'products'],
-  auth: 'required',        // 'none' | 'required' | 'optional'
+  auth: 'required',        // 'none' | 'required' | 'optional' | 'hidden'
   hints: {
     idempotent: true,       // Safe to retry
     sideEffects: false,     // Read-only
@@ -301,6 +301,11 @@ const surf = createSurf({
         if (ctx.claims) { /* personalized */ }
       },
     },
+    adminDashboard: {
+      description: 'Admin analytics dashboard',
+      auth: 'hidden',   // Not in manifest unless authed
+      run: async (params, ctx) => { /* ... */ },
+    },
   },
 });
 ```
@@ -314,6 +319,17 @@ const surf = createSurf({
   // ...
 });
 ```
+
+#### Auth Levels
+
+| Level | In Manifest | Requires Token | Use Case |
+|-------|-------------|----------------|----------|
+| `none` | ✅ Always | No | Public search, browsing |
+| `optional` | ✅ Always | No (enhanced if provided) | Personalized recommendations |
+| `required` | ✅ Always | Yes | User actions, writes |
+| `hidden` | Only with valid token | Yes | Admin tools, internal commands |
+
+**Hidden commands** are completely excluded from `/.well-known/surf.json` when no auth token is provided. Agents without credentials don't even know they exist. When a valid Bearer token is included in the manifest request, hidden commands appear as `auth: 'required'`.
 
 ### Rate Limiting
 
