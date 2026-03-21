@@ -114,6 +114,8 @@ function stripHandler(def: CommandDefinition): ManifestCommand {
   if (def.examples) result.examples = def.examples;
   if (def.rateLimit) result.rateLimit = { windowMs: def.rateLimit.windowMs, maxRequests: def.rateLimit.maxRequests };
 
+  if (def.requiredScopes && def.requiredScopes.length > 0) result.requiredScopes = def.requiredScopes;
+
   // Pagination: auto-inject params and set paginated flag
   if (def.paginated) {
     const paginationParams = buildPaginationParams(def.paginated);

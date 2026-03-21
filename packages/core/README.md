@@ -242,6 +242,7 @@ type AuthVerifier = (token: string, command: string) => Promise<AuthResult>;
 interface AuthResult {
   valid: boolean;
   claims?: Record<string, unknown>;
+  scopes?: string[];
   reason?: string;
 }
 ```
@@ -260,6 +261,41 @@ const surf = createSurf({
   },
 });
 ```
+
+### Scoped Auth
+
+Use `scopedVerifier` to map tokens to permission scopes, and `requiredScopes` to restrict commands:
+
+```ts
+import { createSurf, scopedVerifier } from '@surfjs/core';
+
+const surf = await createSurf({
+  name: 'My Store',
+  authVerifier: scopedVerifier({
+    'read-token': ['read'],
+    'admin-token': ['read', 'cart:write', 'admin'],
+  }),
+  commands: {
+    search: {
+      description: 'Search products',
+      auth: 'required',
+      requiredScopes: ['read'],
+      run: async (params, ctx) => {
+        // ctx.scopes → ['read'] or ['read', 'cart:write', 'admin']
+        return { results: [] };
+      },
+    },
+    checkout: {
+      description: 'Complete purchase',
+      auth: 'required',
+      requiredScopes: ['cart:write'],
+      run: async (params, ctx) => ({ orderId: '123' }),
+    },
+  },
+});
+```
+
+A token must have **all** listed `requiredScopes` to call a command. Missing scopes return an `AUTH_FAILED` error with details on which scopes are missing. Scopes are exposed to handlers via `ctx.scopes`.
 
 ## Command Namespacing
 

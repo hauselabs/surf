@@ -71,6 +71,8 @@ export interface ExecutionContext {
   requestId?: string;
   /** Verified auth claims (populated by auth middleware). */
   claims?: Record<string, unknown>;
+  /** Auth scopes granted to this request (populated by auth middleware). */
+  scopes?: string[];
   /** Client IP address (populated by HTTP transport). */
   ip?: string;
   /** Emit a streaming chunk (only available for streaming commands). */
@@ -118,6 +120,8 @@ export interface CommandDefinition<TParams = Record<string, unknown>, TResult = 
   examples?: CommandExample[];
   /** Enable pagination for this command. `true` uses defaults; object configures behavior. */
   paginated?: boolean | PaginationConfig;
+  /** Required auth scopes. Token must have ALL listed scopes. Only checked when auth is 'required' or 'optional' (with token). */
+  requiredScopes?: string[];
   run: CommandHandler<TParams, TResult>;
 }
 
@@ -202,6 +206,8 @@ export interface ManifestCommand {
   rateLimit?: { windowMs: number; maxRequests: number };
   /** Whether this command supports pagination. Agents can detect this to auto-iterate. */
   paginated?: boolean;
+  /** Required auth scopes — token must have ALL listed scopes. */
+  requiredScopes?: string[];
 }
 
 export interface SurfManifest {
