@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "CLI to inspect and test Surf-enabled sites and apps",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@surfjs/client": "^0.2.0"
+    "@surfjs/client": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.4.0",

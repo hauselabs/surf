@@ -66,8 +66,8 @@ importers:
   packages/cli:
     dependencies:
       '@surfjs/client':
-        specifier: ^0.2.0
-        version: 0.2.0(ws@8.19.0)
+        specifier: workspace:*
+        version: link:../client
     devDependencies:
       tsup:
         specifier: ^8.4.0
@@ -115,8 +115,8 @@ importers:
   packages/devui:
     dependencies:
       '@surfjs/core':
-        specifier: ^0.2.0
-        version: 0.2.0(fastify@5.8.2)(hono@4.12.8)(ws@8.19.0)
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -802,28 +802,6 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
-
-  '@surfjs/client@0.2.0':
-    resolution: {integrity: sha512-1saIYHppLGWirULPjyrkH5Auxw/S0kdJKBMxTU0dN+Oi9ZXbaEbm/cOll5fgy5otKStpG7Wm0DjBPcyq2bnLXA==}
-    peerDependencies:
-      ws: '>=8.0.0'
-    peerDependenciesMeta:
-      ws:
-        optional: true
-
-  '@surfjs/core@0.2.0':
-    resolution: {integrity: sha512-WFBW5XM2TEBVDWXNjqlr3dxUfOFyGVsqLa1cSrKmPuvO2BzStccw4uDhexWLhvu7dpcWMbFEfrcTy4fE2aEY6g==}
-    peerDependencies:
-      fastify: '>=4.0.0'
-      hono: '>=4.0.0'
-      ws: '>=8.0.0'
-    peerDependenciesMeta:
-      fastify:
-        optional: true
-      hono:
-        optional: true
-      ws:
-        optional: true
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
@@ -2288,16 +2266,6 @@ snapshots:
     optional: true
 
   '@standard-schema/spec@1.1.0': {}
-
-  '@surfjs/client@0.2.0(ws@8.19.0)':
-    optionalDependencies:
-      ws: 8.19.0
-
-  '@surfjs/core@0.2.0(fastify@5.8.2)(hono@4.12.8)(ws@8.19.0)':
-    optionalDependencies:
-      fastify: 5.8.2
-      hono: 4.12.8
-      ws: 8.19.0
 
   '@swc/helpers@0.5.15':
     dependencies:
