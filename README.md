@@ -8,7 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-[Website](https://surfjs.dev) · [Protocol Spec](./SPEC.md) · [Examples](./examples) · [Contributing](./CONTRIBUTING.md)
+[Website](https://surf.codes) · [Docs](https://surf.codes/docs) · [Protocol Spec](./SPEC.md) · [Examples](./examples) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
