@@ -1,6 +1,19 @@
+<div align="center">
+
 # @surfjs/client
 
-> Agent-side SDK for discovering and interacting with Surf-enabled websites.
+**The agent-side SDK for Surf-enabled websites.**
+
+[![npm](https://img.shields.io/npm/v/@surfjs/client?color=0057FF&label=npm)](https://www.npmjs.com/package/@surfjs/client)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/hauselabs/surf/blob/main/LICENSE)
+
+</div>
+
+---
+
+Discover, connect, and execute commands on any [Surf](https://surf.codes)-enabled website. Built for AI agents and automation — no scraping, no vision models, just typed commands.
+
+Part of the **[Surf.js](https://github.com/hauselabs/surf)** ecosystem. See [@surfjs/core](https://www.npmjs.com/package/@surfjs/core) for the server-side library.
 
 ```bash
 npm install @surfjs/client

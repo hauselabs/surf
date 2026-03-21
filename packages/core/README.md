@@ -1,6 +1,42 @@
+<div align="center">
+
 # @surfjs/core
 
-> Server-side library for the Surf protocol — define commands, generate manifests, handle transports.
+**Give AI agents a typed CLI to your website.**
+
+[![npm](https://img.shields.io/npm/v/@surfjs/core?color=0057FF&label=npm)](https://www.npmjs.com/package/@surfjs/core)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/hauselabs/surf/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/github/stars/hauselabs/surf?style=social)](https://github.com/hauselabs/surf)
+
+</div>
+
+---
+
+Surf is an **open protocol** that lets websites expose structured commands for AI agents — like a CLI for the web. Instead of scraping HTML or wrestling with vision models, agents discover a typed manifest at `/.well-known/surf.json` and execute commands directly.
+
+**`@surfjs/core`** is the server-side library. Define commands with typed parameters, mount middleware, and let any framework serve them.
+
+### Why Surf?
+
+- 🎯 **Structured, not scraped** — Agents call commands with typed params, not CSS selectors
+- 🔒 **Auth built-in** — Bearer, API key, OAuth2 support out of the box
+- ⚡ **Streaming** — SSE for long-running operations
+- 🧩 **Any framework** — Express, Next.js, Fastify, Hono, or raw Node
+- 📋 **Auto-generated manifest** — `/.well-known/surf.json` describes your entire API
+- 🏷️ **Namespaced commands** — Organize with dot notation (`cart.add`, `cart.remove`)
+
+### Ecosystem
+
+| Package | Description |
+|---------|-------------|
+| **@surfjs/core** | Server-side command registry & middleware |
+| [@surfjs/client](https://www.npmjs.com/package/@surfjs/client) | Agent-side SDK for discovering and executing commands |
+| [@surfjs/cli](https://www.npmjs.com/package/@surfjs/cli) | CLI to inspect, test, and ping Surf endpoints |
+| [@surfjs/devui](https://www.npmjs.com/package/@surfjs/devui) | Interactive dev inspector |
+
+📖 **[Full documentation](https://surf.codes/docs)** · 🎮 **[Live demo](https://surf.codes/demo)** · 🐙 **[GitHub](https://github.com/hauselabs/surf)**
+
+---
 
 ```bash
 npm install @surfjs/core

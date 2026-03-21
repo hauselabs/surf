@@ -1,6 +1,19 @@
+<div align="center">
+
 # @surfjs/devui
 
-> Interactive browser-based dev inspector for Surf-enabled apps.
+**Interactive browser-based dev inspector for Surf-enabled apps.**
+
+[![npm](https://img.shields.io/npm/v/@surfjs/devui?color=0057FF&label=npm)](https://www.npmjs.com/package/@surfjs/devui)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/hauselabs/surf/blob/main/LICENSE)
+
+</div>
+
+---
+
+A visual inspector that mounts alongside your app in development. Browse commands, test execution, inspect responses — all in the browser.
+
+Part of the **[Surf.js](https://github.com/hauselabs/surf)** ecosystem.
 
 ```bash
 npm install @surfjs/devui

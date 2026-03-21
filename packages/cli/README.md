@@ -1,6 +1,19 @@
+<div align="center">
+
 # @surfjs/cli
 
-> Inspect and test Surf-enabled websites from the terminal.
+**Inspect, test, and debug Surf-enabled websites from the terminal.**
+
+[![npm](https://img.shields.io/npm/v/@surfjs/cli?color=0057FF&label=npm)](https://www.npmjs.com/package/@surfjs/cli)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/hauselabs/surf/blob/main/LICENSE)
+
+</div>
+
+---
+
+A command-line tool for working with the [Surf](https://surf.codes) protocol. Discover commands, execute them, and debug your integration — all from your terminal.
+
+Part of the **[Surf.js](https://github.com/hauselabs/surf)** ecosystem.
 
 ```bash
 npm install -g @surfjs/cli
