@@ -273,6 +273,10 @@ export interface LiveConfig {
   maxChannelsPerConnection?: number;
   /** Channel auth — verify if a token can subscribe to a channel */
   channelAuth?: (token: string, channelId: string) => Promise<boolean>;
+  /** Allowed WebSocket origins. Prevents Cross-Site WebSocket Hijacking. If not set, all origins are rejected in production (NODE_ENV=production). */
+  allowedOrigins?: string[];
+  /** Maximum incoming WebSocket message size in bytes. Default: 1MB (1048576) */
+  maxPayloadBytes?: number;
 }
 
 // ─── Transport Types ────────────────────────────────────────────────────────

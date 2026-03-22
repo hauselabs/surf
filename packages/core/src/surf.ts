@@ -67,7 +67,12 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   const manifestData = await generateManifest(config);
   const manifestDataAuthed = await generateManifest(config, { authenticated: true });
 
-  let liveVersion = 0;
+  const channelVersions = new Map<string, number>();
+  function nextVersion(channelId: string): number {
+    const v = (channelVersions.get(channelId) ?? 0) + 1;
+    channelVersions.set(channelId, v);
+    return v;
+  }
   const middlewareStack: SurfMiddleware[] = [];
 
   if (config.authVerifier) {
@@ -139,7 +144,24 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { WebSocketServer } = require('ws') as typeof import('ws');
-        const wss = new WebSocketServer({ server: server as never });
+        const maxPayload = config.live?.maxPayloadBytes ?? 1_048_576; // 1MB default
+        const allowedOrigins = config.live?.allowedOrigins;
+
+        const wss = new WebSocketServer({
+          server: server as never,
+          maxPayload,
+          verifyClient: (info: { origin: string; req: unknown }, cb: (result: boolean, code?: number, message?: string) => void) => {
+            // Origin checking to prevent Cross-Site WebSocket Hijacking
+            if (allowedOrigins && allowedOrigins.length > 0) {
+              const origin = info.origin;
+              if (!origin || !allowedOrigins.includes(origin)) {
+                cb(false, 403, 'Origin not allowed');
+                return;
+              }
+            }
+            cb(true);
+          },
+        });
         attachWebSocket(wss, {
           registry,
           sessions: sessionStore,
@@ -168,12 +190,12 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
     get live(): SurfLive {
       return {
         setState(channelId: string, state: unknown) {
-          liveVersion++;
-          eventBus.emitToChannel('surf:state', { channel: channelId, state, version: liveVersion }, channelId);
+          const version = nextVersion(channelId);
+          eventBus.emitToChannel('surf:state', { channel: channelId, state, version }, channelId);
         },
         patchState(channelId: string, patch: unknown) {
-          liveVersion++;
-          eventBus.emitToChannel('surf:patch', { channel: channelId, patch, version: liveVersion }, channelId);
+          const version = nextVersion(channelId);
+          eventBus.emitToChannel('surf:patch', { channel: channelId, patch, version }, channelId);
         },
         emit(event: string, data: unknown, channelId: string) {
           eventBus.emitToChannel(event, data, channelId);
