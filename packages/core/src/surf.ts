@@ -32,6 +32,10 @@ export interface SurfLive {
    */
   patchState(channelId: string, patch: unknown): void;
   /**
+   * Get the last known state for a channel (for initial delivery on subscribe).
+   */
+  getState(channelId: string): { state: unknown; version: number } | undefined;
+  /**
    * Emit a custom event to all clients subscribed to a channel.
    */
   emit(event: string, data: unknown, channelId: string): void;
@@ -70,6 +74,7 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   const manifestDataAuthed = await generateManifest(config, { authenticated: true });
 
   const channelVersions = new Map<string, number>();
+  const channelStates = new Map<string, unknown>();
   function nextVersion(channelId: string): number {
     const v = (channelVersions.get(channelId) ?? 0) + 1;
     channelVersions.set(channelId, v);
@@ -180,6 +185,12 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
           sessions: sessionStore,
           events: eventBus,
           live: config.live,
+          getChannelState: (channelId: string) => {
+            const state = channelStates.get(channelId);
+            const version = channelVersions.get(channelId);
+            if (state === undefined || version === undefined) return undefined;
+            return { state, version };
+          },
         });
       } catch {
         throw new Error(
@@ -203,12 +214,25 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
     get live(): SurfLive {
       return {
         setState(channelId: string, state: unknown) {
+          channelStates.set(channelId, state);
           const version = nextVersion(channelId);
           eventBus.emitToChannel('surf:state', { channel: channelId, state, version }, channelId);
         },
         patchState(channelId: string, patch: unknown) {
+          // Apply shallow merge to cached state
+          const current = channelStates.get(channelId);
+          if (current && typeof current === 'object' && patch && typeof patch === 'object') {
+            channelStates.set(channelId, { ...(current as Record<string, unknown>), ...(patch as Record<string, unknown>) });
+          }
           const version = nextVersion(channelId);
           eventBus.emitToChannel('surf:patch', { channel: channelId, patch, version }, channelId);
+        },
+        /** Get the last known state for a channel (for initial delivery on subscribe). */
+        getState(channelId: string): { state: unknown; version: number } | undefined {
+          const state = channelStates.get(channelId);
+          const version = channelVersions.get(channelId);
+          if (state === undefined || version === undefined) return undefined;
+          return { state, version };
         },
         emit(event: string, data: unknown, channelId: string) {
           eventBus.emitToChannel(event, data, channelId);

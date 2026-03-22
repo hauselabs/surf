@@ -138,6 +138,7 @@ const results = await client.execute('search', { query: 'blue shoes', maxPrice: 
 | [`@surfjs/devui`](./packages/devui) | Interactive browser-based dev inspector for Surf commands | [![npm](https://img.shields.io/npm/v/@surfjs/devui.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/devui) |
 | [`@surfjs/next`](./packages/next) | Next.js App Router & Pages Router adapter | [![npm](https://img.shields.io/npm/v/@surfjs/next.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/next) |
 | [`@surfjs/zod`](./packages/zod) | Zod schema integration for typed command params | [![npm](https://img.shields.io/npm/v/@surfjs/zod.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/zod) |
+| [`@surfjs/react`](./packages/react) | React hooks for Surf Live — real-time state sync via WebSocket | [![npm](https://img.shields.io/npm/v/@surfjs/react.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/react) |
 
 ---
 

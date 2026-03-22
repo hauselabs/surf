@@ -8,6 +8,8 @@ interface WsTransportOptions {
   sessions: InMemorySessionStore;
   events: EventBus;
   live?: LiveConfig;
+  /** Get last known state for initial delivery on channel subscribe. */
+  getChannelState?: (channelId: string) => { state: unknown; version: number } | undefined;
 }
 
 interface WebSocketLike {
@@ -194,6 +196,19 @@ export function attachWebSocket(
             channelUnsubscribes.set(channelId, () => {
               for (const unsub of eventUnsubs) unsub();
             });
+
+            // Deliver initial state if available
+            if (options.getChannelState) {
+              const initial = options.getChannelState(channelId);
+              if (initial && ws.readyState === WS_OPEN) {
+                const initMsg: WsEventMessage = {
+                  type: 'event',
+                  event: 'surf:state',
+                  data: { channel: channelId, state: initial.state, version: initial.version },
+                };
+                ws.send(JSON.stringify(initMsg));
+              }
+            }
           }
           break;
         }
