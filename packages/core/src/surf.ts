@@ -39,7 +39,9 @@ export interface SurfLive {
 
 export interface SurfInstance {
   use(middleware: SurfMiddleware): void;
-  manifest(): SurfManifest;
+  manifest(options?: { authenticated?: boolean }): SurfManifest;
+  /** Get the appropriate manifest for a given auth token. Returns authed manifest (with hidden commands) if token is valid. */
+  manifestForToken(token: string | undefined): Promise<SurfManifest>;
   manifestHandler(): HttpHandler;
   httpHandler(): HttpHandler;
   middleware(): HttpHandler;
@@ -111,6 +113,17 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
 
     manifest(options?: { authenticated?: boolean }) {
       return options?.authenticated ? manifestDataAuthed : manifestData;
+    },
+
+    async manifestForToken(token: string | undefined): Promise<SurfManifest> {
+      const hasHidden = Object.keys(manifestDataAuthed.commands).length > Object.keys(manifestData.commands).length;
+      if (!hasHidden || !token || !config.authVerifier) return manifestData;
+      try {
+        const result = await config.authVerifier(token, '__manifest__');
+        return result.valid ? manifestDataAuthed : manifestData;
+      } catch {
+        return manifestData;
+      }
     },
 
     manifestHandler() {

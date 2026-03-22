@@ -197,8 +197,8 @@ export class SurfClient {
     return new SurfClient(manifest, options);
   }
 
-  /** List all available commands. */
-  commands(): Record<string, ManifestCommand> {
+  /** List all available commands (as property). */
+  get commands(): Record<string, ManifestCommand> {
     return this.manifest.commands;
   }
 

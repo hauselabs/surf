@@ -58,7 +58,8 @@ export function fastifyPlugin(surf: SurfInstance) {
   return async function surfPlugin(fastify: any) {
     // ─── GET /.well-known/surf.json ────────────────────────────────────
     fastify.get('/.well-known/surf.json', async (req: any, reply: any) => {
-      const manifestData = surf.manifest();
+      const token = extractAuth(req.headers as Record<string, string | string[] | undefined>);
+      const manifestData = await surf.manifestForToken(token);
       const etag = `"${manifestData.checksum}"`;
 
       if (req.headers['if-none-match'] === etag) {

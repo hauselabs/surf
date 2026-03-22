@@ -94,7 +94,7 @@ describe('SurfClient', () => {
     const client = await SurfClient.discover('http://localhost:3000', { fetch: mockFetch });
 
     expect(client.manifest.name).toBe('TestShop');
-    expect(client.commands()).toBeDefined();
+    expect(client.commands).toBeDefined();
     expect(client.command('search')?.description).toBe('Search products');
   });
 

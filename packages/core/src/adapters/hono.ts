@@ -22,10 +22,15 @@ import { executePipeline } from '../transport/pipeline.js';
  * app.route('/', honoApp(surf))
  * ```
  */
-export function honoApp(surf: SurfInstance): any {
-  // Dynamic require to avoid compile-time dependency on hono
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Hono } = require('hono') as { Hono: new () => any };
+export async function honoApp(surf: SurfInstance): Promise<any> {
+  // Dynamic import to avoid compile-time dependency on hono (works in both ESM and CJS)
+  let Hono: new () => any;
+  try {
+    const mod = await import('hono');
+    Hono = (mod as any).Hono;
+  } catch {
+    throw new Error('@surfjs/core: Hono adapter requires the "hono" package. Install it: pnpm add hono');
+  }
   const app = new Hono();
 
   const registry = surf.commands;
@@ -57,8 +62,9 @@ export function honoApp(surf: SurfInstance): any {
   }
 
   // ─── GET /.well-known/surf.json ──────────────────────────────────────
-  app.get('/.well-known/surf.json', (c: any) => {
-    const manifestData = surf.manifest();
+  app.get('/.well-known/surf.json', async (c: any) => {
+    const token = extractAuth(c);
+    const manifestData = await surf.manifestForToken(token);
     const etag = `"${manifestData.checksum}"`;
 
     if (c.req.header('if-none-match') === etag) {
@@ -241,7 +247,7 @@ export function honoApp(surf: SurfInstance): any {
  * export default { fetch: honoMiddleware(surf) }
  * ```
  */
-export function honoMiddleware(surf: SurfInstance): (request: Request, env?: unknown, ctx?: unknown) => Promise<Response> {
-  const app = honoApp(surf);
+export async function honoMiddleware(surf: SurfInstance): Promise<(request: Request, env?: unknown, ctx?: unknown) => Promise<Response>> {
+  const app = await honoApp(surf);
   return (request: Request, env?: unknown, ctx?: unknown) => app.fetch(request, env, ctx);
 }

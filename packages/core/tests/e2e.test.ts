@@ -116,7 +116,7 @@ describe('E2E: Real HTTP server with @surfjs/client', () => {
 
   it('lists all commands from manifest', async () => {
     const client = await SurfClient.discover(baseUrl);
-    const cmds = client.commands();
+    const cmds = client.commands;
     expect(Object.keys(cmds)).toContain('search');
     expect(Object.keys(cmds)).toContain('cart.add');
     expect(Object.keys(cmds)).toContain('checkout');
