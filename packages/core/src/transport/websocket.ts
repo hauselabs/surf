@@ -150,36 +150,50 @@ export function attachWebSocket(
               continue;
             }
             if (live?.channelAuth) {
-              const allowed = await live.channelAuth(authToken, channelId);
-              if (!allowed) continue;
+              try {
+                const allowed = await live.channelAuth(authToken, channelId);
+                if (!allowed) continue;
+              } catch {
+                // channelAuth threw — fail-closed, deny subscription
+                continue;
+              }
             }
 
             subscribedChannels.add(channelId);
 
-            // Listen for channel-scoped events
-            const unsub = events.on(
-              'surf:state',
-              (data) => {
-                if (ws.readyState !== WS_OPEN) return;
-                const eventMsg: WsEventMessage = { type: 'event', event: 'surf:state', data };
-                ws.send(JSON.stringify(eventMsg));
-              },
-              { channelId },
-            );
-            channelUnsubscribes.set(channelId, unsub);
+            // Listen for ALL channel-scoped events (state, patch, and custom)
+            const channelEvents = ['surf:state', 'surf:patch'];
+            // Also subscribe to any user-defined events
+            for (const [eventName] of events.getDefinitions()) {
+              if (!channelEvents.includes(eventName)) channelEvents.push(eventName);
+            }
 
-            // Also listen for patch events
-            const unsubPatch = events.on(
-              'surf:patch',
-              (data) => {
-                if (ws.readyState !== WS_OPEN) return;
-                const eventMsg: WsEventMessage = { type: 'event', event: 'surf:patch', data };
-                ws.send(JSON.stringify(eventMsg));
-              },
-              { channelId },
-            );
-            const origUnsub = channelUnsubscribes.get(channelId)!;
-            channelUnsubscribes.set(channelId, () => { origUnsub(); unsubPatch(); });
+            const eventUnsubs: Array<() => void> = [];
+            for (const eventName of channelEvents) {
+              const unsub = events.on(
+                eventName,
+                (data) => {
+                  if (ws.readyState !== WS_OPEN) return;
+                  const eventMsg: WsEventMessage = { type: 'event', event: eventName, data };
+                  ws.send(JSON.stringify(eventMsg));
+                },
+                { channelId },
+              );
+              eventUnsubs.push(unsub);
+            }
+
+            // Also listen for dynamically emitted channel events (catch-all)
+            const customUnsub = events.onChannel(channelId, (eventName, data) => {
+              if (ws.readyState !== WS_OPEN) return;
+              if (channelEvents.includes(eventName)) return; // already handled
+              const eventMsg: WsEventMessage = { type: 'event', event: eventName, data };
+              ws.send(JSON.stringify(eventMsg));
+            });
+            eventUnsubs.push(customUnsub);
+
+            channelUnsubscribes.set(channelId, () => {
+              for (const unsub of eventUnsubs) unsub();
+            });
           }
           break;
         }

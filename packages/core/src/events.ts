@@ -35,9 +35,12 @@ interface ScopedCallback {
  * Use `scope: 'global'` for system-wide broadcasts (e.g. maintenance announcements).
  * Use `scope: 'broadcast'` to send to all connected clients.
  */
+type ChannelCatchAllCallback = (eventName: string, data: unknown) => void;
+
 export class EventBus {
   private readonly definitions: ReadonlyMap<string, ScopedEventDefinition>;
   private readonly listeners = new Map<string, Set<ScopedCallback>>();
+  private readonly channelCatchAll = new Map<string, Set<ChannelCatchAllCallback>>();
 
   constructor(events?: Record<string, EventDefinition | ScopedEventDefinition>) {
     this.definitions = new Map(Object.entries(events ?? {}));
@@ -106,18 +109,48 @@ export class EventBus {
    * @param channelId - Target channel identifier
    */
   emitToChannel(event: string, data: unknown, channelId: string): void {
+    // Deliver to event-specific channel listeners
     const set = this.listeners.get(event);
-    if (!set) return;
-
-    for (const entry of set) {
-      if (entry.channelId !== channelId) continue;
-
-      try {
-        entry.callback(data);
-      } catch {
-        // Swallow listener errors — don't break emit loop
+    if (set) {
+      for (const entry of set) {
+        if (entry.channelId !== channelId) continue;
+        try {
+          entry.callback(data);
+        } catch {
+          // Swallow listener errors — don't break emit loop
+        }
       }
     }
+
+    // Deliver to catch-all channel listeners
+    const catchAll = this.channelCatchAll.get(channelId);
+    if (catchAll) {
+      for (const cb of catchAll) {
+        try {
+          cb(event, data);
+        } catch {
+          // Swallow listener errors
+        }
+      }
+    }
+  }
+
+  /**
+   * Subscribe to ALL events on a specific channel (catch-all).
+   * Useful for forwarding any channel event over WebSocket.
+   * Returns an unsubscribe function.
+   */
+  onChannel(channelId: string, callback: ChannelCatchAllCallback): () => void {
+    let set = this.channelCatchAll.get(channelId);
+    if (!set) {
+      set = new Set();
+      this.channelCatchAll.set(channelId, set);
+    }
+    set.add(callback);
+    return () => {
+      set.delete(callback);
+      if (set.size === 0) this.channelCatchAll.delete(channelId);
+    };
   }
 
   /**
@@ -181,6 +214,7 @@ export class EventBus {
         }
       }
     }
+    this.channelCatchAll.delete(channelId);
   }
 
   hasDefinition(event: string): boolean {

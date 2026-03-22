@@ -53,6 +53,7 @@ export function SurfProvider({ url, auth, channels, children }: SurfProviderProp
   const mountedRef = useRef(true);
   const channelsRef = useRef(channels);
   const authRef = useRef(auth);
+  const subscribedChannelsRef = useRef<Set<string>>(new Set(channels ?? []));
 
   // Keep refs in sync
   channelsRef.current = channels;
@@ -82,10 +83,15 @@ export function SurfProvider({ url, auth, channels, children }: SurfProviderProp
         ws.send(JSON.stringify({ type: 'auth', token: authRef.current }));
       }
 
-      // Subscribe to initial channels
-      if (channelsRef.current && channelsRef.current.length > 0) {
-        ws.send(JSON.stringify({ type: 'subscribe', channels: channelsRef.current }));
-        setSubscribedChannels(new Set(channelsRef.current));
+      // Re-subscribe to all channels (initial + dynamically added)
+      const allChannels = new Set([
+        ...(channelsRef.current ?? []),
+        ...subscribedChannelsRef.current,
+      ]);
+      if (allChannels.size > 0) {
+        ws.send(JSON.stringify({ type: 'subscribe', channels: [...allChannels] }));
+        setSubscribedChannels(allChannels);
+        subscribedChannelsRef.current = allChannels;
       }
     };
 
@@ -192,6 +198,7 @@ export function SurfProvider({ url, auth, channels, children }: SurfProviderProp
 
   const subscribeChannel = useCallback((channelId: string) => {
     sendRaw({ type: 'subscribe', channels: [channelId] });
+    subscribedChannelsRef.current.add(channelId);
     setSubscribedChannels(prev => {
       const next = new Set(prev);
       next.add(channelId);
@@ -201,6 +208,7 @@ export function SurfProvider({ url, auth, channels, children }: SurfProviderProp
 
   const unsubscribeChannel = useCallback((channelId: string) => {
     sendRaw({ type: 'unsubscribe', channels: [channelId] });
+    subscribedChannelsRef.current.delete(channelId);
     setSubscribedChannels(prev => {
       const next = new Set(prev);
       next.delete(channelId);
