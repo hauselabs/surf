@@ -60,7 +60,14 @@ export function flattenCommands(
       if (key === '_description') continue;
       const fullKey = prefix ? `${prefix}.${key}` : key;
       if (isCommandDefinition(value)) {
-        result[fullKey] = value;
+        // Normalize boolean auth to string literals
+        if (value.auth === true) {
+          result[fullKey] = { ...value, auth: 'required' };
+        } else if (value.auth === false) {
+          result[fullKey] = { ...value, auth: 'none' };
+        } else {
+          result[fullKey] = value;
+        }
       } else if (typeof value === 'object' && value !== null) {
         walk(value as Record<string, CommandDefinition | CommandGroup>, fullKey);
       }

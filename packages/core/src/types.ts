@@ -110,7 +110,7 @@ export interface CommandDefinition<TParams = Record<string, unknown>, TResult = 
   params?: Record<string, ParamSchema>;
   returns?: ParamSchema | TypeRef;
   tags?: string[];
-  auth?: 'none' | 'required' | 'optional' | 'hidden';
+  auth?: 'none' | 'required' | 'optional' | 'hidden' | boolean;
   hints?: CommandHints;
   /** Enable SSE streaming for this command. */
   stream?: boolean;
@@ -200,7 +200,7 @@ export interface ManifestCommand {
   params?: Record<string, ParamSchema>;
   returns?: ParamSchema | TypeRef;
   tags?: string[];
-  auth?: 'none' | 'required' | 'optional' | 'hidden';
+  auth?: 'none' | 'required' | 'optional' | 'hidden' | boolean;
   hints?: CommandHints;
   examples?: CommandExample[];
   rateLimit?: { windowMs: number; maxRequests: number };

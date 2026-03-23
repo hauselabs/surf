@@ -272,6 +272,17 @@ export function createMiddleware(
     const url = req.url ?? '';
     const path = url.split('?')[0];
 
+    // Universal CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      });
+      res.end();
+      return;
+    }
+
     if (path === '/.well-known/surf.json' && (req.method === 'GET' || req.method === 'HEAD')) {
       return manifestHandler(req, res);
     }

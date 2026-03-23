@@ -71,6 +71,7 @@ export class HttpTransport {
     const response = await this.fetch(`${this.baseUrl}/surf/session/start`, {
       method: 'POST',
       headers,
+      body: JSON.stringify({}),
     });
 
     const data = (await response.json()) as { ok: boolean; sessionId?: string };

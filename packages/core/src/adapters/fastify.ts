@@ -55,7 +55,27 @@ export function fastifyPlugin(surf: SurfInstance) {
     }
   }
 
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
   return async function surfPlugin(fastify: any) {
+    // ─── OPTIONS (CORS preflight) ──────────────────────────────────────
+    const optionsRoutes = [
+      '/.well-known/surf.json',
+      '/surf/execute',
+      '/surf/pipeline',
+      '/surf/session/start',
+      '/surf/session/end',
+    ];
+    for (const route of optionsRoutes) {
+      fastify.options(route, async (_req: any, reply: any) => {
+        return reply.code(204).headers(corsHeaders).send();
+      });
+    }
+
     // ─── GET /.well-known/surf.json ────────────────────────────────────
     fastify.get('/.well-known/surf.json', async (req: any, reply: any) => {
       const token = extractAuth(req.headers as Record<string, string | string[] | undefined>);

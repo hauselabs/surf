@@ -61,6 +61,25 @@ export async function honoApp(surf: SurfInstance): Promise<any> {
     }
   }
 
+  // ─── OPTIONS (CORS preflight) ────────────────────────────────────────
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+  const optionsRoutes = [
+    '/.well-known/surf.json',
+    '/surf/execute',
+    '/surf/pipeline',
+    '/surf/session/start',
+    '/surf/session/end',
+  ];
+  for (const route of optionsRoutes) {
+    app.options(route, (c: any) => {
+      return c.body(null, 204, corsHeaders);
+    });
+  }
+
   // ─── GET /.well-known/surf.json ──────────────────────────────────────
   app.get('/.well-known/surf.json', async (c: any) => {
     const token = extractAuth(c);
