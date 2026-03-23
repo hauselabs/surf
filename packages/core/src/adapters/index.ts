@@ -1,2 +1,2 @@
 export { fastifyPlugin } from './fastify.js';
-export { honoApp, honoMiddleware } from './hono.js';
+export { honoApp, honoAppSync, honoMiddleware } from './hono.js';

@@ -22,15 +22,7 @@ import { executePipeline } from '../transport/pipeline.js';
  * app.route('/', honoApp(surf))
  * ```
  */
-export async function honoApp(surf: SurfInstance): Promise<any> {
-  // Dynamic import to avoid compile-time dependency on hono (works in both ESM and CJS)
-  let Hono: new () => any;
-  try {
-    const mod = await import('hono');
-    Hono = (mod as any).Hono;
-  } catch {
-    throw new Error('@surfjs/core: Hono adapter requires the "hono" package. Install it: pnpm add hono');
-  }
+function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
   const app = new Hono();
 
   const registry = surf.commands;
@@ -256,6 +248,51 @@ export async function honoApp(surf: SurfInstance): Promise<any> {
   });
 
   return app;
+}
+
+/**
+ * Creates a Hono sub-app that mounts all Surf routes.
+ *
+ * Usage:
+ * ```ts
+ * import { Hono } from 'hono'
+ * import { createSurf } from '@surfjs/core'
+ * import { honoApp } from '@surfjs/core/hono'
+ *
+ * const surf = createSurf({ ... })
+ * const app = new Hono()
+ * app.route('/', await honoApp(surf))
+ * ```
+ */
+export async function honoApp(surf: SurfInstance): Promise<any> {
+  // Dynamic import to avoid compile-time dependency on hono (works in both ESM and CJS)
+  let Hono: new () => any;
+  try {
+    const mod = await import('hono');
+    Hono = (mod as any).Hono;
+  } catch {
+    throw new Error('@surfjs/core: Hono adapter requires the "hono" package. Install it: pnpm add hono');
+  }
+  return buildHonoApp(surf, Hono);
+}
+
+/**
+ * Synchronous variant — pass in your Hono constructor to avoid the dynamic import.
+ * Useful for Cloudflare Workers and other environments where top-level await is awkward.
+ *
+ * Usage:
+ * ```ts
+ * import { Hono } from 'hono'
+ * import { createSurf } from '@surfjs/core'
+ * import { honoAppSync } from '@surfjs/core/hono'
+ *
+ * const surf = createSurf({ ... })
+ * const app = new Hono()
+ * app.route('/', honoAppSync(surf, Hono))
+ * ```
+ */
+export function honoAppSync(surf: SurfInstance, HonoCtor: new () => any): any {
+  return buildHonoApp(surf, HonoCtor);
 }
 
 /**
