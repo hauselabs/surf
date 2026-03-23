@@ -98,6 +98,12 @@ export function createSurfRouteHandler(
     // /.well-known/surf.json
     if (route === '/.well-known/surf.json' || route === '/') {
       const manifestData = surf.manifest();
+      if (!manifestData) {
+        return new Response(
+          JSON.stringify({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Surf not initialized' } }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
       const etag = `"${manifestData.checksum}"`;
 
       if (request.headers.get('if-none-match') === etag) {

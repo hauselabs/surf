@@ -13,13 +13,16 @@ export function generateBrowserScript(
 ): string {
   // We serialize the manifest and create a lightweight runtime.
   // The actual command execution happens via postMessage to the host page.
-  const manifestJson = JSON.stringify(manifest);
+  // Escape sequences that could break out of a <script> tag (XSS mitigation).
+  const safeJson = JSON.stringify(manifest)
+    .replace(/<\//g, '<\\/')
+    .replace(/<!--/g, '<\\!--');
 
   return `
 (function() {
   'use strict';
 
-  var manifest = ${manifestJson};
+  var manifest = ${safeJson};
   var listeners = {};
   var authToken = null;
 

@@ -33,11 +33,11 @@ export class WebSocketTransport {
    * Connect to a Surf WebSocket endpoint.
    */
   async connect(url: string, auth?: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       // Try browser WebSocket first, then Node ws
       const WsConstructor = typeof WebSocket !== 'undefined'
         ? WebSocket
-        : this.getNodeWs();
+        : await this.getNodeWsAsync();
 
       if (!WsConstructor) {
         reject(new Error('WebSocket not available. Install "ws" package for Node.js.'));
@@ -208,11 +208,10 @@ export class WebSocketTransport {
     }
   }
 
-  private getNodeWs(): (new (url: string) => WebSocketLike) | null {
+  private async getNodeWsAsync(): Promise<(new (url: string) => WebSocketLike) | null> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require('ws') as { default?: unknown; WebSocket?: unknown };
-      const WsCtor = (mod.default ?? mod) as new (url: string) => WebSocketLike;
+      const mod = await import('ws');
+      const WsCtor = (mod.default ?? mod) as unknown as new (url: string) => WebSocketLike;
       return WsCtor;
     } catch {
       return null;
