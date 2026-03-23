@@ -1,4 +1,3 @@
-import type { ZodObject, ZodTypeAny, infer as ZodInfer } from 'zod';
 import type {
   CommandDefinition,
   CommandHints,
@@ -17,9 +16,10 @@ export { zodValidator } from './validate.js';
 /**
  * Configuration for defining a Surf command using a Zod schema.
  * The `params` field accepts a `z.object({...})` instead of raw `ParamSchema`.
+ * Uses loose typing to support both Zod 3 and Zod 4.
  */
 export interface ZodCommandConfig<
-  S extends ZodObject<Record<string, ZodTypeAny>>,
+  S extends Record<string, unknown> = Record<string, unknown>,
   R = unknown,
 > {
   /** Human-readable description of what this command does (shown to agents). */
@@ -42,8 +42,8 @@ export interface ZodCommandConfig<
   examples?: CommandExample[];
   /** Enable pagination for this command. */
   paginated?: boolean | PaginationConfig;
-  /** The command handler — receives fully-typed params inferred from the Zod schema. */
-  run: (params: ZodInfer<S>, ctx: ExecutionContext) => R | Promise<R>;
+  /** The command handler — receives params (use Zod's infer for typing in your code). */
+  run: (params: Record<string, unknown>, ctx: ExecutionContext) => R | Promise<R>;
 }
 
 /**
@@ -72,7 +72,7 @@ export interface ZodCommandConfig<
  * ```
  */
 export function defineZodCommand<
-  S extends ZodObject<Record<string, ZodTypeAny>>,
+  S extends Record<string, unknown> = Record<string, unknown>,
   R = unknown,
 >(config: ZodCommandConfig<S, R>): CommandDefinition {
   const { params: zodSchema, run, ...rest } = config;

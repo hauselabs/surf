@@ -1,27 +1,13 @@
 import type { ParamSchema } from '@surfjs/core';
-import {
-  type ZodTypeAny,
-  ZodString,
-  ZodNumber,
-  ZodBoolean,
-  ZodEnum,
-  ZodObject,
-  ZodArray,
-  ZodOptional,
-  ZodDefault,
-  ZodNullable,
-  ZodEffects,
-  ZodLiteral,
-  ZodUnion,
-  ZodNativeEnum,
-} from 'zod';
 
 /**
  * Convert a single Zod type to a Surf ParamSchema.
- * Recursively handles nested objects, arrays, optionals, defaults, etc.
+ * Uses duck-typing on _def.typeName to avoid instanceof checks
+ * that break across Zod versions (especially Zod 4).
  */
-export function convertZodType(zodType: ZodTypeAny): ParamSchema {
-  const description = zodType.description;
+export function convertZodType(zodType: unknown): ParamSchema {
+  const def = (zodType as { description?: string; _def?: Record<string, unknown> });
+  const description = def.description;
   const base = convertZodTypeInner(zodType);
 
   if (description) {
@@ -31,49 +17,63 @@ export function convertZodType(zodType: ZodTypeAny): ParamSchema {
   return base;
 }
 
-function convertZodTypeInner(zodType: ZodTypeAny): ParamSchema {
-  // Unwrap ZodEffects (refinements, transforms, preprocess)
-  if (zodType instanceof ZodEffects) {
-    return convertZodTypeInner(zodType._def.schema as ZodTypeAny);
+function getTypeName(zodType: unknown): string | undefined {
+  const def = (zodType as { _def?: { typeName?: string } })?._def;
+  return def?.typeName;
+}
+
+function getDef(zodType: unknown): Record<string, unknown> {
+  return ((zodType as { _def?: Record<string, unknown> })?._def ?? {});
+}
+
+function convertZodTypeInner(zodType: unknown): ParamSchema {
+  const typeName = getTypeName(zodType);
+  const def = getDef(zodType);
+
+  // ZodEffects (refinements, transforms, preprocess)
+  if (typeName === 'ZodEffects') {
+    return convertZodTypeInner(def.schema);
   }
 
   // ZodDefault — extract default value, recurse into inner type
-  if (zodType instanceof ZodDefault) {
-    const inner = convertZodTypeInner(zodType._def.innerType as ZodTypeAny);
-    inner.default = zodType._def.defaultValue();
+  if (typeName === 'ZodDefault') {
+    const inner = convertZodTypeInner(def.innerType);
+    if (typeof def.defaultValue === 'function') {
+      inner.default = (def.defaultValue as () => unknown)();
+    }
     return inner;
   }
 
   // ZodOptional — mark as not required, recurse
-  if (zodType instanceof ZodOptional) {
-    const inner = convertZodTypeInner(zodType._def.innerType as ZodTypeAny);
+  if (typeName === 'ZodOptional') {
+    const inner = convertZodTypeInner(def.innerType);
     inner.required = false;
     return inner;
   }
 
   // ZodNullable — treat like optional for Surf's purposes
-  if (zodType instanceof ZodNullable) {
-    const inner = convertZodTypeInner(zodType._def.innerType as ZodTypeAny);
+  if (typeName === 'ZodNullable') {
+    const inner = convertZodTypeInner(def.innerType);
     inner.required = false;
     return inner;
   }
 
   // Primitives
-  if (zodType instanceof ZodString) {
+  if (typeName === 'ZodString') {
     return { type: 'string' };
   }
 
-  if (zodType instanceof ZodNumber) {
+  if (typeName === 'ZodNumber') {
     return { type: 'number' };
   }
 
-  if (zodType instanceof ZodBoolean) {
+  if (typeName === 'ZodBoolean') {
     return { type: 'boolean' };
   }
 
   // ZodLiteral — infer type from value
-  if (zodType instanceof ZodLiteral) {
-    const value = zodType._def.value as unknown;
+  if (typeName === 'ZodLiteral') {
+    const value = def.value;
     if (typeof value === 'string') {
       return { type: 'string', enum: [value] };
     }
@@ -87,32 +87,40 @@ function convertZodTypeInner(zodType: ZodTypeAny): ParamSchema {
   }
 
   // ZodEnum — string enum
-  if (zodType instanceof ZodEnum) {
-    const values = zodType._def.values as readonly string[];
-    return { type: 'string', enum: values };
-  }
-
-  // ZodNativeEnum — JS enum
-  if (zodType instanceof ZodNativeEnum) {
-    const enumObj = zodType._def.values as Record<string, string | number>;
-    const values = Object.values(enumObj).filter(
-      (v): v is string => typeof v === 'string',
-    );
-    if (values.length > 0) {
+  if (typeName === 'ZodEnum') {
+    const values = def.values as readonly string[] | undefined;
+    if (values) {
       return { type: 'string', enum: values };
     }
     return { type: 'string' };
   }
 
+  // ZodNativeEnum — JS enum
+  if (typeName === 'ZodNativeEnum') {
+    const enumObj = def.values as Record<string, string | number> | undefined;
+    if (enumObj) {
+      const values = Object.values(enumObj).filter(
+        (v): v is string => typeof v === 'string',
+      );
+      if (values.length > 0) {
+        return { type: 'string', enum: values };
+      }
+    }
+    return { type: 'string' };
+  }
+
   // ZodObject — recursive conversion
-  if (zodType instanceof ZodObject) {
-    const shape = zodType._def.shape() as Record<string, ZodTypeAny>;
+  if (typeName === 'ZodObject') {
+    const shapeFn = def.shape;
+    const shape: Record<string, unknown> = typeof shapeFn === 'function'
+      ? (shapeFn as () => Record<string, unknown>)()
+      : (shapeFn as Record<string, unknown> ?? {});
+
     const properties: Record<string, ParamSchema> = {};
 
     for (const [key, value] of Object.entries(shape)) {
       if (value) {
         const converted = convertZodType(value);
-        // In Zod, fields are required by default unless wrapped in .optional()
         if (converted.required === undefined) {
           converted.required = true;
         }
@@ -124,15 +132,19 @@ function convertZodTypeInner(zodType: ZodTypeAny): ParamSchema {
   }
 
   // ZodArray — convert item type
-  if (zodType instanceof ZodArray) {
-    const itemSchema = convertZodType(zodType._def.type as ZodTypeAny);
-    return { type: 'array', items: itemSchema };
+  if (typeName === 'ZodArray') {
+    const itemType = def.type ?? def.element;
+    if (itemType) {
+      const itemSchema = convertZodType(itemType);
+      return { type: 'array', items: itemSchema };
+    }
+    return { type: 'array' };
   }
 
   // ZodUnion — use first variant as a best-effort conversion
-  if (zodType instanceof ZodUnion) {
-    const options = zodType._def.options as ZodTypeAny[];
-    if (options.length > 0 && options[0]) {
+  if (typeName === 'ZodUnion') {
+    const options = def.options as unknown[] | undefined;
+    if (options && options.length > 0) {
       return convertZodTypeInner(options[0]);
     }
     return { type: 'string' };
@@ -150,15 +162,19 @@ function convertZodTypeInner(zodType: ZodTypeAny): ParamSchema {
  * @returns A record of parameter names to their Surf ParamSchema definitions
  */
 export function zodToSurfParams(
-  schema: ZodObject<Record<string, ZodTypeAny>>,
+  schema: unknown,
 ): Record<string, ParamSchema> {
-  const shape = schema._def.shape() as Record<string, ZodTypeAny>;
+  const def = getDef(schema);
+  const shapeFn = def.shape;
+  const shape: Record<string, unknown> = typeof shapeFn === 'function'
+    ? (shapeFn as () => Record<string, unknown>)()
+    : (shapeFn as Record<string, unknown> ?? {});
+
   const result: Record<string, ParamSchema> = {};
 
   for (const [key, value] of Object.entries(shape)) {
     if (value) {
       const converted = convertZodType(value);
-      // Top-level params: required by default unless explicitly optional
       if (converted.required === undefined) {
         converted.required = true;
       }

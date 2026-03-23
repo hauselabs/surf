@@ -157,7 +157,12 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
     let sessionState: Record<string, unknown> | undefined;
     if (body.sessionId) {
       const session = await sessions.get(body.sessionId);
-      if (session) sessionState = session.state;
+      if (!session) {
+        res.writeHead(410, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify({ ok: false, error: { code: 'SESSION_EXPIRED', message: `Session "${body.sessionId}" has expired or been destroyed` } }));
+        return;
+      }
+      sessionState = session.state;
     }
 
     const command = registry.get(body.command);
@@ -227,8 +232,11 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
       headers['Retry-After'] = String(retryAfter);
     }
 
+    // Strip internal state from response — never expose server-side session state to clients
+    const { state: _state, ...clientResponse } = response as unknown as Record<string, unknown>;
+
     res.writeHead(statusCode, headers);
-    res.end(JSON.stringify(response));
+    res.end(JSON.stringify(clientResponse));
   };
 }
 

@@ -120,7 +120,10 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
 
     if (body.sessionId) {
       const session = await sessions.get(body.sessionId);
-      if (session) sessionState = session.state;
+      if (!session) {
+        return c.json({ ok: false, error: { code: 'SESSION_EXPIRED', message: `Session "${body.sessionId}" has expired or been destroyed` } }, 410);
+      }
+      sessionState = session.state;
     }
 
     const command = registry.get(body.command);
@@ -195,7 +198,9 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
       headers['Retry-After'] = String(Math.ceil(retryMs / 1000));
     }
 
-    return c.json(response, statusCode, headers);
+    // Strip internal state from response
+    const { state: _state, ...clientResponse } = response as unknown as Record<string, unknown>;
+    return c.json(clientResponse, statusCode, headers);
   });
 
   // ─── POST /surf/pipeline ─────────────────────────────────────────────

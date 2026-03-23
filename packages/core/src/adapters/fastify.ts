@@ -111,7 +111,10 @@ export function fastifyPlugin(surf: SurfInstance) {
 
       if (body.sessionId) {
         const session = await sessions.get(body.sessionId);
-        if (session) sessionState = session.state;
+        if (!session) {
+          return reply.code(410).send({ ok: false, error: { code: 'SESSION_EXPIRED', message: `Session "${body.sessionId}" has expired or been destroyed` } });
+        }
+        sessionState = session.state;
       }
 
       const command = registry.get(body.command);
@@ -175,7 +178,9 @@ export function fastifyPlugin(surf: SurfInstance) {
       for (const [k, v] of Object.entries(headers)) {
         r = r.header(k, v);
       }
-      return r.send(response);
+      // Strip internal state from response
+      const { state: _state, ...clientResponse } = response as unknown as Record<string, unknown>;
+      return r.send(clientResponse);
     });
 
     // ─── POST /surf/pipeline ───────────────────────────────────────────

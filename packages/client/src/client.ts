@@ -97,6 +97,16 @@ const DEFAULT_RETRY: RetryConfig = {
   retryOn: [429, 502, 503, 504],
 };
 
+/** Error codes that indicate permanent failures — never retry these. */
+const PERMANENT_ERROR_CODES = new Set([
+  'UNKNOWN_COMMAND',
+  'INVALID_PARAMS',
+  'AUTH_REQUIRED',
+  'AUTH_FAILED',
+  'FORBIDDEN',
+  'NOT_FOUND',
+]);
+
 async function withRetry<T>(
   fn: () => Promise<{ value: T; statusCode?: number; retryAfter?: number }>,
   config: RetryConfig,
@@ -119,6 +129,12 @@ async function withRetry<T>(
       return value;
     } catch (e) {
       lastError = e;
+
+      // Never retry permanent application errors
+      if (e instanceof SurfClientError && PERMANENT_ERROR_CODES.has(e.code)) {
+        throw e;
+      }
+
       if (attempt < config.maxAttempts - 1) {
         const delay = config.backoffMs * Math.pow(config.backoffMultiplier, attempt) + Math.random() * 100;
         await sleep(delay);

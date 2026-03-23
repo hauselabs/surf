@@ -62,7 +62,11 @@ export async function generateManifest(config: SurfConfig, options?: ManifestOpt
     ...(config.about ? { about: config.about } : {}),
     ...(config.version ? { version: config.version } : {}),
     ...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
-    ...(config.auth ? { auth: config.auth } : {}),
+    ...(config.auth
+      ? { auth: config.auth }
+      : config.authVerifier
+        ? { auth: { type: 'bearer' as const, description: 'Authentication required for some commands' } }
+        : {}),
     commands,
     ...(config.events ? { events: config.events } : {}),
     ...(config.types ? { types: config.types } : {}),
