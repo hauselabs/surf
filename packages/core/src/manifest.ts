@@ -1,4 +1,4 @@
-import type { SurfConfig, SurfManifest, ManifestCommand, CommandDefinition, ParamSchema, PaginationConfig } from './types.js';
+import type { SurfConfig, SurfManifest, ManifestCommand, ManifestChannel, CommandDefinition, ChannelDefinition, ParamSchema, PaginationConfig } from './types.js';
 import { flattenCommands } from './namespace.js';
 
 const SPEC_VERSION = '0.1.0';
@@ -70,6 +70,7 @@ export async function generateManifest(config: SurfConfig, options?: ManifestOpt
     commands,
     ...(config.events ? { events: config.events } : {}),
     ...(config.types ? { types: config.types } : {}),
+    ...(config.channels ? { channels: serializeChannels(config.channels) } : {}),
     checksum,
     updatedAt: opts.updatedAt ?? new Date().toISOString(),
   };
@@ -103,6 +104,21 @@ function buildPaginationParams(config: true | PaginationConfig): Record<string, 
   };
 
   return params;
+}
+
+/**
+ * Serialize channel definitions for the manifest.
+ * Strips runtime-only data (initialState) and keeps only
+ * description and stateSchema.
+ */
+function serializeChannels(channels: Record<string, ChannelDefinition>): Record<string, ManifestChannel> {
+  const result: Record<string, ManifestChannel> = {};
+  for (const [name, def] of Object.entries(channels)) {
+    const channel: ManifestChannel = { description: def.description };
+    if (def.stateSchema) channel.stateSchema = def.stateSchema;
+    result[name] = channel;
+  }
+  return result;
 }
 
 function stripHandler(def: CommandDefinition): ManifestCommand {
