@@ -202,7 +202,7 @@ export class SurfClient {
     const baseUrl = url.replace(/\/$/, '');
     const fetchFn = options?.fetch ?? globalThis.fetch;
     const timeout = options?.discoverTimeout ?? 5000;
-    const manifest = await discoverManifest(baseUrl, fetchFn, timeout);
+    const manifest = await discoverManifest(baseUrl, fetchFn, timeout, options?.auth);
     return new SurfClient(manifest, { baseUrl, ...options, fetch: fetchFn });
   }
 
@@ -324,7 +324,7 @@ export class SurfClient {
   async checkForUpdates(): Promise<UpdateCheckResult & { manifest?: SurfManifest }> {
     const fetchFn = (this.http as unknown as { fetch: typeof globalThis.fetch }).fetch ?? globalThis.fetch;
     try {
-      const fresh = await discoverManifest(this.baseUrl, fetchFn);
+      const fresh = await discoverManifest(this.baseUrl, fetchFn, undefined, this.auth);
       const changed = fresh.checksum !== this.manifest.checksum;
       return { changed, checksum: fresh.checksum, ...(changed ? { manifest: fresh } : {}) };
     } catch {
