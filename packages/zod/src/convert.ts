@@ -17,9 +17,31 @@ export function convertZodType(zodType: unknown): ParamSchema {
   return base;
 }
 
+/**
+ * Map Zod 4 lowercase `_def.type` values to Zod 3 `_def.typeName` equivalents.
+ * This lets the rest of the conversion logic use a single set of comparisons.
+ */
+const ZOD4_TYPE_MAP: Record<string, string> = {
+  string: 'ZodString',
+  number: 'ZodNumber',
+  boolean: 'ZodBoolean',
+  object: 'ZodObject',
+  array: 'ZodArray',
+  enum: 'ZodEnum',
+  literal: 'ZodLiteral',
+  union: 'ZodUnion',
+  optional: 'ZodOptional',
+  nullable: 'ZodNullable',
+  default: 'ZodDefault',
+  effects: 'ZodEffects',
+  nativeEnum: 'ZodNativeEnum',
+};
+
 function getTypeName(zodType: unknown): string | undefined {
-  const def = (zodType as { _def?: { typeName?: string } })?._def;
-  return def?.typeName;
+  const def = (zodType as { _def?: { typeName?: string; type?: string } })?._def;
+  if (def?.typeName) return def.typeName;
+  if (def?.type) return ZOD4_TYPE_MAP[def.type] ?? def.type;
+  return undefined;
 }
 
 function getDef(zodType: unknown): Record<string, unknown> {
@@ -132,8 +154,10 @@ function convertZodTypeInner(zodType: unknown): ParamSchema {
   }
 
   // ZodArray — convert item type
+  // Zod 3 stores item schema in `def.type`, Zod 4 uses `def.element`.
+  // Check `element` first since `def.type` may hold the Zod 4 type name string.
   if (typeName === 'ZodArray') {
-    const itemType = def.type ?? def.element;
+    const itemType = def.element ?? (typeof def.type === 'object' ? def.type : undefined);
     if (itemType) {
       const itemSchema = convertZodType(itemType);
       return { type: 'array', items: itemSchema };
