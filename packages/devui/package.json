@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/devui",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Interactive introspection UI for Surf-enabled applications",
   "type": "module",
   "main": "./dist/index.cjs",
