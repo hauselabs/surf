@@ -107,7 +107,14 @@ export function createAuthMiddleware(
         ctx.error = { ok: false, requestId: ctx.context.requestId, error: err.toJSON() };
         return;
       }
-      const result = await verifier(token, ctx.command);
+      let result: AuthResult;
+      try {
+        result = await verifier(token, ctx.command);
+      } catch {
+        const err = authFailed('Authentication verification failed');
+        ctx.error = { ok: false, requestId: ctx.context.requestId, error: err.toJSON() };
+        return;
+      }
       if (!result.valid) {
         const err = authFailed(result.reason);
         ctx.error = { ok: false, requestId: ctx.context.requestId, error: err.toJSON() };
@@ -121,7 +128,14 @@ export function createAuthMiddleware(
 
     if (authLevel === 'optional') {
       if (token) {
-        const result = await verifier(token, ctx.command);
+        let result: AuthResult;
+        try {
+          result = await verifier(token, ctx.command);
+        } catch {
+          const err = authFailed('Authentication verification failed');
+          ctx.error = { ok: false, requestId: ctx.context.requestId, error: err.toJSON() };
+          return;
+        }
         if (!result.valid) {
           const err = authFailed(result.reason);
           ctx.error = { ok: false, requestId: ctx.context.requestId, error: err.toJSON() };

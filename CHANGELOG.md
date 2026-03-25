@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.8 (2026-03-25)
+
+### Bug Fixes
+
+- **@surfjs/zod:** Fixed Zod 4 type detection — all types were falling back to `'string'` because `_def.typeName` doesn't exist in Zod 4. Now checks `_def.type` (Zod 4) as fallback and normalizes to consistent type names. Also fixes enum value extraction (`entries` vs `values`), array element resolution, and default value handling (raw value vs function). (#45)
+- **@surfjs/zod:** Fixed `defineZodCommand()` TypeScript strict mode incompatibility — `ZodObject` not assignable to `params` type. Changed constraint from `S extends Record<string, unknown>` to `S extends object`. (#54)
+- **@surfjs/core:** Circular references in command responses no longer crash the server. JSON serialization is wrapped in try/catch, returning a proper `INTERNAL_ERROR` response. (#53)
+- **@surfjs/core:** `authVerifier` exceptions no longer propagate to Express — wrapped verifier calls in try/catch, returning structured `AUTH_FAILED` JSON response instead of HTML 500. (#52)
+- **@surfjs/core:** `wsHandler()` now works in ESM modules. Replaced `require('ws')` with `await import('ws')` during `createSurf()` initialization for CJS/ESM dual compatibility. (#51)
+
+### No Breaking Changes
+
+This release contains only bug fixes. No API changes.
+
 ## 0.2.0 (2026-03-21)
 
 ### Features — Overnight Queue (Phases 1–8)

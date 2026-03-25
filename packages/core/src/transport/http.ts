@@ -235,8 +235,14 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
     // Strip internal state from response — never expose server-side session state to clients
     const { state: _state, ...clientResponse } = response as unknown as Record<string, unknown>;
 
-    res.writeHead(statusCode, headers);
-    res.end(JSON.stringify(clientResponse));
+    try {
+      const body = JSON.stringify(clientResponse);
+      res.writeHead(statusCode, headers);
+      res.end(body);
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to serialize response' } }));
+    }
   };
 }
 
