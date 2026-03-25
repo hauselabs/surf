@@ -4,6 +4,7 @@ export default defineConfig({
   entry: [
     'src/index.ts',
     'src/pages.ts',
+    'src/middleware.ts',
   ],
   format: ['esm', 'cjs'],
   dts: true,
