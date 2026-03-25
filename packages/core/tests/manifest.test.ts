@@ -72,6 +72,55 @@ describe('generateManifest', () => {
     expect(new Date(manifest.updatedAt).toISOString()).toBe(manifest.updatedAt);
   });
 
+  it('includes channels in manifest when configured', async () => {
+    const configWithChannels: SurfConfig = {
+      ...config,
+      channels: {
+        'game:lobby': {
+          description: 'Lobby state for matchmaking',
+          stateSchema: {
+            players: { type: 'array', description: 'Current players in lobby' },
+            status: { type: 'string', enum: ['waiting', 'starting', 'full'] },
+          },
+          initialState: { players: [], status: 'waiting' },
+        },
+        notifications: {
+          description: 'Real-time notification feed',
+        },
+      },
+    };
+    const manifest = await generateManifest(configWithChannels);
+    expect(manifest.channels).toBeDefined();
+    expect(manifest.channels!['game:lobby'].description).toBe('Lobby state for matchmaking');
+    expect(manifest.channels!['game:lobby'].stateSchema).toBeDefined();
+    expect(manifest.channels!['game:lobby'].stateSchema!['players'].type).toBe('array');
+    expect(manifest.channels!['notifications'].description).toBe('Real-time notification feed');
+    expect(manifest.channels!['notifications'].stateSchema).toBeUndefined();
+  });
+
+  it('strips initialState from channel manifest (runtime-only data)', async () => {
+    const configWithChannels: SurfConfig = {
+      ...config,
+      channels: {
+        counter: {
+          description: 'A counter channel',
+          stateSchema: { count: { type: 'number' } },
+          initialState: { count: 0 },
+        },
+      },
+    };
+    const manifest = await generateManifest(configWithChannels);
+    const channel = manifest.channels!['counter'];
+    expect(channel.description).toBe('A counter channel');
+    expect(channel.stateSchema).toEqual({ count: { type: 'number' } });
+    expect((channel as Record<string, unknown>)['initialState']).toBeUndefined();
+  });
+
+  it('omits channels from manifest when not configured', async () => {
+    const manifest = await generateManifest(config);
+    expect(manifest.channels).toBeUndefined();
+  });
+
   it('flattens nested command groups to dot notation', async () => {
     const nested: SurfConfig = {
       name: 'Nested',

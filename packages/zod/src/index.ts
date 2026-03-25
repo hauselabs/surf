@@ -19,7 +19,7 @@ export { zodValidator } from './validate.js';
  * Uses loose typing to support both Zod 3 and Zod 4.
  */
 export interface ZodCommandConfig<
-  S extends Record<string, unknown> = Record<string, unknown>,
+  S extends object = Record<string, unknown>,
   R = unknown,
 > {
   /** Human-readable description of what this command does (shown to agents). */
@@ -72,7 +72,7 @@ export interface ZodCommandConfig<
  * ```
  */
 export function defineZodCommand<
-  S extends Record<string, unknown> = Record<string, unknown>,
+  S extends object = Record<string, unknown>,
   R = unknown,
 >(config: ZodCommandConfig<S, R>): CommandDefinition {
   const { params: zodSchema, run, ...rest } = config;

@@ -32,6 +32,10 @@ export type {
   // Events
   EventDefinition,
 
+  // Channels
+  ChannelDefinition,
+  ManifestChannel,
+
   // Sessions
   Session,
   SessionStore,

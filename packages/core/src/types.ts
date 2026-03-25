@@ -193,6 +193,32 @@ export interface EventDefinition {
   data?: Record<string, ParamSchema | TypeRef>;
 }
 
+// ─── Channel Types ──────────────────────────────────────────────────────────
+
+/**
+ * Configuration for a real-time channel declared in `SurfConfig.channels`.
+ * Describes the channel's purpose and the shape of its state.
+ */
+export interface ChannelDefinition {
+  /** Human-readable description of what this channel provides. */
+  description: string;
+  /** Schema describing the shape of state pushed on this channel. */
+  stateSchema?: Record<string, ParamSchema | TypeRef>;
+  /** Initial state value (runtime-only — not included in manifest). */
+  initialState?: unknown;
+}
+
+/**
+ * Manifest-safe representation of a channel.
+ * Excludes runtime-only data like initial state values.
+ */
+export interface ManifestChannel {
+  /** Human-readable description of what this channel provides. */
+  description: string;
+  /** Schema describing the shape of state pushed on this channel. */
+  stateSchema?: Record<string, ParamSchema | TypeRef>;
+}
+
 // ─── Manifest Types ─────────────────────────────────────────────────────────
 
 export interface ManifestCommand {
@@ -222,6 +248,8 @@ export interface SurfManifest {
   commands: Record<string, ManifestCommand>;
   events?: Record<string, EventDefinition>;
   types?: Record<string, TypeDefinition>;
+  /** Real-time channels available for subscription via Surf Live. */
+  channels?: Record<string, ManifestChannel>;
   /** Deterministic SHA-256 hash of the commands schema. */
   checksum: string;
   /** ISO timestamp of when the Surf instance was created. */
@@ -246,6 +274,8 @@ export interface SurfConfig {
   commands: Record<string, CommandDefinition | CommandGroup>;
   events?: Record<string, EventDefinition>;
   types?: Record<string, TypeDefinition>;
+  /** Real-time channels available for Surf Live subscription. */
+  channels?: Record<string, ChannelDefinition>;
   /** Middleware pipeline applied to all command executions. */
   middleware?: import('./middleware.js').SurfMiddleware[];
   /** Auth verifier - when set, Surf auto-installs an auth enforcement middleware. */

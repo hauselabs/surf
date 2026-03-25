@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/zod",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Zod schema integration for Surf.js — define commands with Zod instead of raw ParamSchema",
   "type": "module",
   "main": "./dist/index.cjs",

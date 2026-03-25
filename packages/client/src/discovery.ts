@@ -8,15 +8,21 @@ export async function discoverManifest(
   baseUrl: string,
   fetchFn: typeof globalThis.fetch = globalThis.fetch,
   timeoutMs = 5000,
+  auth?: string,
 ): Promise<SurfManifest> {
   const url = new URL('/.well-known/surf.json', baseUrl);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  const baseHeaders: Record<string, string> = {};
+  if (auth) {
+    baseHeaders['Authorization'] = `Bearer ${auth}`;
+  }
+
   try {
     const response = await fetchFn(url.toString(), {
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', ...baseHeaders },
       signal: controller.signal,
     });
 
@@ -31,7 +37,7 @@ export async function discoverManifest(
     // Fallback: try HTML <meta name="surf" content="..."> discovery
     const htmlUrl = new URL('/', baseUrl);
     const htmlResp = await fetchFn(htmlUrl.toString(), {
-      headers: { Accept: 'text/html' },
+      headers: { Accept: 'text/html', ...baseHeaders },
       signal: controller.signal,
     });
 
@@ -43,7 +49,7 @@ export async function discoverManifest(
       if (match?.[1]) {
         const manifestUrl = new URL(match[1], baseUrl);
         const mResp = await fetchFn(manifestUrl.toString(), {
-          headers: { Accept: 'application/json' },
+          headers: { Accept: 'application/json', ...baseHeaders },
           signal: controller.signal,
         });
         if (mResp.ok) {

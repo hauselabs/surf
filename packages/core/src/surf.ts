@@ -61,6 +61,16 @@ export interface SurfInstance {
 }
 
 export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
+  // Eagerly try to load ws for WebSocket support (works in both CJS and ESM)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let WsServer: any;
+  try {
+    const ws = await import('ws') as any;
+    WsServer = ws.WebSocketServer ?? ws.default?.WebSocketServer;
+  } catch {
+    // ws not installed — wsHandler() will throw a clear error if called
+  }
+
   const validateReturns = config.strict === true || config.validateReturns === true;
   const debug = config.debug === true;
   const registry = new CommandRegistry(config.commands, {
@@ -159,44 +169,41 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
     },
 
     wsHandler(server) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { WebSocketServer } = require('ws') as typeof import('ws');
-        const maxPayload = config.live?.maxPayloadBytes ?? 1_048_576; // 1MB default
-        const allowedOrigins = config.live?.allowedOrigins;
-
-        const wss = new WebSocketServer({
-          server: server as never,
-          maxPayload,
-          verifyClient: (info: { origin: string; req: unknown }, cb: (result: boolean, code?: number, message?: string) => void) => {
-            // Origin checking to prevent Cross-Site WebSocket Hijacking
-            if (allowedOrigins && allowedOrigins.length > 0) {
-              const origin = info.origin;
-              if (!origin || !allowedOrigins.includes(origin)) {
-                cb(false, 403, 'Origin not allowed');
-                return;
-              }
-            }
-            cb(true);
-          },
-        });
-        attachWebSocket(wss, {
-          registry,
-          sessions: sessionStore,
-          events: eventBus,
-          live: config.live,
-          getChannelState: (channelId: string) => {
-            const state = channelStates.get(channelId);
-            const version = channelVersions.get(channelId);
-            if (state === undefined || version === undefined) return undefined;
-            return { state, version };
-          },
-        });
-      } catch {
+      if (!WsServer) {
         throw new Error(
           '@surfjs/core: WebSocket transport requires the "ws" package. Install it: pnpm add ws',
         );
       }
+      const maxPayload = config.live?.maxPayloadBytes ?? 1_048_576; // 1MB default
+      const allowedOrigins = config.live?.allowedOrigins;
+
+      const wss = new WsServer({
+        server: server as never,
+        maxPayload,
+        verifyClient: (info: { origin: string; req: unknown }, cb: (result: boolean, code?: number, message?: string) => void) => {
+          // Origin checking to prevent Cross-Site WebSocket Hijacking
+          if (allowedOrigins && allowedOrigins.length > 0) {
+            const origin = info.origin;
+            if (!origin || !allowedOrigins.includes(origin)) {
+              cb(false, 403, 'Origin not allowed');
+              return;
+            }
+          }
+          cb(true);
+        },
+      });
+      attachWebSocket(wss, {
+        registry,
+        sessions: sessionStore,
+        events: eventBus,
+        live: config.live,
+        getChannelState: (channelId: string) => {
+          const state = channelStates.get(channelId);
+          const version = channelVersions.get(channelId);
+          if (state === undefined || version === undefined) return undefined;
+          return { state, version };
+        },
+      });
     },
 
     browserScript() {

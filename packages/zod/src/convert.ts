@@ -18,8 +18,15 @@ export function convertZodType(zodType: unknown): ParamSchema {
 }
 
 function getTypeName(zodType: unknown): string | undefined {
-  const def = (zodType as { _def?: { typeName?: string } })?._def;
-  return def?.typeName;
+  const def = (zodType as { _def?: { typeName?: string; type?: string } })?._def;
+  // Zod 3 uses _def.typeName (e.g. 'ZodString'), Zod 4 uses _def.type (e.g. 'string')
+  const raw = def?.typeName ?? def?.type;
+  if (!raw) return undefined;
+  // Normalize Zod 4 lowercase names to Zod 3 convention for consistent matching
+  if (raw[0] !== 'Z') {
+    return `Zod${raw.charAt(0).toUpperCase()}${raw.slice(1)}`;
+  }
+  return raw;
 }
 
 function getDef(zodType: unknown): Record<string, unknown> {
@@ -38,8 +45,11 @@ function convertZodTypeInner(zodType: unknown): ParamSchema {
   // ZodDefault — extract default value, recurse into inner type
   if (typeName === 'ZodDefault') {
     const inner = convertZodTypeInner(def.innerType);
+    // Zod 3: defaultValue is a function; Zod 4: defaultValue is the raw value
     if (typeof def.defaultValue === 'function') {
       inner.default = (def.defaultValue as () => unknown)();
+    } else if (def.defaultValue !== undefined) {
+      inner.default = def.defaultValue;
     }
     return inner;
   }
@@ -88,9 +98,14 @@ function convertZodTypeInner(zodType: unknown): ParamSchema {
 
   // ZodEnum — string enum
   if (typeName === 'ZodEnum') {
+    // Zod 3: def.values is string[]; Zod 4: def.entries is Record<string, string>
     const values = def.values as readonly string[] | undefined;
-    if (values) {
+    if (values && Array.isArray(values)) {
       return { type: 'string', enum: values };
+    }
+    const entries = def.entries as Record<string, string> | undefined;
+    if (entries && typeof entries === 'object') {
+      return { type: 'string', enum: Object.values(entries) };
     }
     return { type: 'string' };
   }
@@ -133,7 +148,9 @@ function convertZodTypeInner(zodType: unknown): ParamSchema {
 
   // ZodArray — convert item type
   if (typeName === 'ZodArray') {
-    const itemType = def.type ?? def.element;
+    // Zod 3: def.type is the element schema; Zod 4: def.element is the element schema
+    // Avoid using def.type here since Zod 4 uses it for the type name string ('array')
+    const itemType = def.element ?? (typeof def.type === 'object' ? def.type : undefined);
     if (itemType) {
       const itemSchema = convertZodType(itemType);
       return { type: 'array', items: itemSchema };
