@@ -35,6 +35,9 @@ packages/
   client/     Agent-side SDK (discover, execute, pipeline)
   cli/        Terminal tool (inspect, test, ping)
   devui/      Browser-based dev inspector
+  next/       Next.js adapter (App Router + Pages Router)
+  react/      React hooks + SurfBadge component for Surf Live
+  zod/        Zod schema integration (Zod 3 + 4 compatible)
 examples/     Runnable examples for each framework
 ```
 

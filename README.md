@@ -177,7 +177,8 @@ import { honoApp } from '@surfjs/core/hono';
 
 const surf = await createSurf({ name: 'My App', commands: { /* ... */ } });
 const app = new Hono();
-app.route('/', honoApp(surf));
+const surfApp = await honoApp(surf);
+app.route('/', surfApp);
 ```
 
 Hono also exports `honoMiddleware(surf)` which returns a fetch handler for Cloudflare Workers:

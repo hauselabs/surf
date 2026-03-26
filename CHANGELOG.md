@@ -1,5 +1,15 @@
 # Changelog
 
+## @surfjs/react 0.4.0 (2026-03-26)
+
+### Features
+
+- **SurfBadge component** — Holographic seal badge that signals a site is Surf-enabled. Serves dual purpose: visual trust signal for humans + machine-readable context for AI vision models. Includes hover panel with command descriptions, ambient hue drift, and theme-aware styling. (#62)
+
+### No Breaking Changes
+
+The version bump from 0.3.x to 0.4.0 reflects the addition of the SurfBadge component as a significant new feature. There are no breaking changes to existing hooks (`useSurf`, `useSurfChannel`, `useSurfEvent`, `useSurfState`). No migration needed.
+
 ## 0.3.8 (2026-03-25)
 
 ### Bug Fixes
