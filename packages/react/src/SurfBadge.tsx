@@ -20,6 +20,7 @@ export interface SurfBadgeProps {
   /** Commands to embed for vision model discovery */
   commands?: SurfBadgeCommand[]
   /** Badge placement */
+  /** Badge placement (default: bottom-left to avoid conflict with chat widgets) */
   position?: 'bottom-right' | 'bottom-left' | 'inline'
   /** Custom className */
   className?: string
@@ -132,7 +133,7 @@ export function SurfBadge({
   name,
   description,
   commands = [],
-  position = 'bottom-right',
+  position = 'bottom-left',
   className = '',
   theme = 'auto',
 }: SurfBadgeProps) {
@@ -198,23 +199,29 @@ export function SurfBadge({
           ...posStyles[position],
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '4px 12px 4px 4px',
+          gap: 10,
+          padding: '5px 14px 5px 5px',
           borderRadius: sealSize,
           textDecoration: 'none',
           cursor: 'pointer',
-          background: dark
-            ? `rgba(255,255,255,${hovered ? 0.06 : 0.03})`
-            : `rgba(0,0,0,${hovered ? 0.05 : 0.02})`,
-          border: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+          background: hovered
+            ? dark
+              ? 'linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(123,97,255,0.07) 50%, rgba(255,107,157,0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(0,180,220,0.08) 0%, rgba(100,80,200,0.05) 50%, rgba(220,90,130,0.03) 100%)'
+            : dark
+              ? 'rgba(255,255,255,0.02)'
+              : 'rgba(0,0,0,0.01)',
+          border: hovered
+            ? `1px solid ${dark ? 'rgba(0,212,255,0.18)' : 'rgba(0,160,200,0.12)'}`
+            : `1px solid ${dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
           boxShadow: hovered
             ? dark
-              ? '0 2px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04)'
-              : '0 2px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.03)'
+              ? '0 4px 24px rgba(0,212,255,0.12), 0 8px 40px rgba(123,97,255,0.08), inset 0 1px 0 rgba(255,255,255,0.06)'
+              : '0 4px 24px rgba(0,160,200,0.1), 0 8px 40px rgba(100,80,200,0.05), inset 0 1px 0 rgba(255,255,255,0.4)'
             : 'none',
-          transition: 'all 400ms cubic-bezier(0.16, 1, 0.3, 1)',
-          transform: hovered ? 'scale(1.02)' : 'scale(1)',
-          opacity: hovered ? 1 : 0.7,
+          transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
+          transform: hovered ? 'translateY(-2px) scale(1.04)' : 'scale(1)',
+          opacity: hovered ? 1 : 0.5,
           userSelect: 'none' as const,
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         }}
@@ -225,24 +232,33 @@ export function SurfBadge({
       >
         <div style={{
           width: sealSize, height: sealSize, flexShrink: 0,
-          opacity: hovered ? 1 : 0.8, transition: 'opacity 400ms ease',
+          opacity: hovered ? 1 : 0.65,
+          transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
+          transform: hovered ? 'rotate(8deg) scale(1.12)' : 'rotate(0) scale(1)',
+          filter: hovered
+            ? dark
+              ? 'drop-shadow(0 0 8px rgba(0,212,255,0.35)) brightness(1.2)'
+              : 'drop-shadow(0 0 8px rgba(0,160,200,0.25)) brightness(1.1)'
+            : 'none',
         }}>
           <Seal size={sealSize} hue={hue} dark={dark} />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{
-            fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
-            color: dark
-              ? `rgba(255,255,255,${hovered ? 0.75 : 0.55})`
-              : `rgba(0,0,0,${hovered ? 0.65 : 0.45})`,
-            lineHeight: 1.2, transition: 'color 300ms ease',
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', lineHeight: 1.2,
+            transition: 'color 400ms ease',
+            color: hovered
+              ? dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)'
+              : dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.28)',
           }}>
             Surf-Enabled
           </span>
           <span style={{
-            fontSize: 8, letterSpacing: '0.04em',
-            color: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
-            lineHeight: 1.2,
+            fontSize: 8, letterSpacing: '0.04em', lineHeight: 1.2,
+            transition: 'color 400ms ease',
+            color: hovered
+              ? dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)'
+              : dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)',
           }}>
             AI agents can interact with this site
           </span>
