@@ -23,6 +23,59 @@ export interface SurfBadgeProps {
   className?: string
 }
 
+// ─── Psychedelic keyframes (injected once) ────────────────────────────────────
+
+const PSYCH_ID = 'surf-psych-fx'
+const PSYCH_CSS = `
+@keyframes surfSealSpin {
+  0% { transform: rotate(0deg) scale(1.1); }
+  50% { transform: rotate(180deg) scale(1.18); }
+  100% { transform: rotate(360deg) scale(1.1); }
+}
+@keyframes surfGlowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(255,0,128,0.5)) drop-shadow(0 0 24px rgba(0,212,255,0.3)) saturate(2.5) brightness(1.3);
+  }
+  33% {
+    filter: drop-shadow(0 0 10px rgba(0,212,255,0.5)) drop-shadow(0 0 24px rgba(123,97,255,0.3)) saturate(2.8) brightness(1.4);
+  }
+  66% {
+    filter: drop-shadow(0 0 10px rgba(123,97,255,0.5)) drop-shadow(0 0 24px rgba(255,0,128,0.3)) saturate(2.5) brightness(1.3);
+  }
+}
+@keyframes surfCardGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(255,0,128,0.25), 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(123,97,255,0.15); }
+  33% { box-shadow: 0 0 30px rgba(0,212,255,0.25), 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(255,107,0,0.15); }
+  66% { box-shadow: 0 0 30px rgba(123,97,255,0.25), 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(0,212,255,0.15); }
+}
+@keyframes surfCardGlowLight {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,0,128,0.1), 0 20px 60px rgba(0,0,0,0.06), 0 0 60px rgba(123,97,255,0.08); }
+  33% { box-shadow: 0 0 20px rgba(0,180,220,0.1), 0 20px 60px rgba(0,0,0,0.06), 0 0 60px rgba(255,107,0,0.08); }
+  66% { box-shadow: 0 0 20px rgba(123,97,255,0.1), 0 20px 60px rgba(0,0,0,0.06), 0 0 60px rgba(0,180,220,0.08); }
+}
+@keyframes surfShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes surfPillFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+@keyframes surfBadgePulse {
+  0%, 100% { transform: scale(1.06); }
+  50% { transform: scale(1.12); }
+}
+`
+
+function injectPsychStyles() {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(PSYCH_ID)) return
+  const s = document.createElement('style')
+  s.id = PSYCH_ID
+  s.textContent = PSYCH_CSS
+  document.head.appendChild(s)
+}
+
 // ─── Machine-readable hidden context ──────────────────────────────────────────
 
 function buildMicroManifest(props: SurfBadgeProps): string {
@@ -54,7 +107,6 @@ function Seal({
   const tickCount = 72
   const domain = endpoint.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
-  // Theme + active state colors
   const strokeMain = active
     ? dark
       ? `hsla(${190 + hue * 0.3}, 80%, 70%, 0.9)`
@@ -83,7 +135,6 @@ function Seal({
     : dark
       ? `hsla(${200 + hue * 0.15}, 50%, 75%, 0.7)`
       : `hsla(${210 + hue * 0.15}, 50%, 40%, 0.65)`
-  // Data text — subtle, for vision models
   const dataColor = active
     ? dark
       ? `hsla(${200 + hue * 0.2}, 40%, 65%, 0.6)`
@@ -114,62 +165,39 @@ function Seal({
       return `${r + Math.cos(a) * rad},${r + Math.sin(a) * rad}`
     }).join(' ')
 
-  // Build the outer ring text — contains encoded endpoint + command info
   const outerText = `SURF ✦ ${domain.toUpperCase()} ✦ ${commandCount} CMD${commandCount !== 1 ? 'S' : ''} ✦`
-  // Inner ring — manifest path for agents
   const innerText = `/.well-known/surf.json ✦ surf exec ${domain} ✦`
-
-  // Unique IDs to avoid SVG conflicts when multiple badges exist
   const uid = useRef(`sb-${Math.random().toString(36).slice(2, 8)}`).current
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
       <defs>
         <clipPath id={`${uid}-clip`}><circle cx={r} cy={r} r={r * 0.97} /></clipPath>
-        {/* Outer text path */}
         <path id={`${uid}-outer`} d={`M ${r},${r} m ${-r * 0.72},0 a ${r * 0.72},${r * 0.72} 0 1,1 ${r * 1.44},0 a ${r * 0.72},${r * 0.72} 0 1,1 ${-r * 1.44},0`} />
-        {/* Inner text path (tighter) */}
         <path id={`${uid}-inner`} d={`M ${r},${r} m ${-r * 0.53},0 a ${r * 0.53},${r * 0.53} 0 1,1 ${r * 1.06},0 a ${r * 0.53},${r * 0.53} 0 1,1 ${-r * 1.06},0`} />
       </defs>
       <g clipPath={`url(#${uid}-clip)`}>
-        {/* Guilloche interference */}
         <polyline points={guilloche(0, inner * 0.14, 9, 200)} fill="none" stroke={strokeAccent} strokeWidth="0.3" opacity="0.3" />
         <polyline points={guilloche(2, inner * 0.11, 13, 200)} fill="none" stroke={strokeMain} strokeWidth="0.25" opacity="0.2" />
         <polyline points={guilloche(4, inner * 0.09, 18, 200)} fill="none" stroke={strokeAccent} strokeWidth="0.2" opacity="0.15" />
-
-        {/* Rings */}
         <circle cx={r} cy={r} r={r * 0.96} fill="none" stroke={strokeMain} strokeWidth="0.7" />
         <circle cx={r} cy={r} r={r * 0.76} fill="none" stroke={strokeMain} strokeWidth="0.25" opacity="0.3" />
-
-        {/* Ticks */}
         {ticks.map((t, i) => (
           <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
             stroke={strokeMain} strokeWidth={t.w} opacity={t.o} />
         ))}
-
-        {/* Inner circle */}
         <circle cx={r} cy={r} r={inner} fill="none" stroke={strokeMain} strokeWidth="0.6" opacity="0.6" />
-
-        {/* Wave glyph */}
         <g transform={`translate(${r - inner * 0.38}, ${r - inner * 0.06})`}>
           <path
             d={`M0,${inner * 0.06} C${inner * 0.16},${-inner * 0.09} ${inner * 0.28},${inner * 0.22} ${inner * 0.42},${inner * 0.06} C${inner * 0.56},${-inner * 0.09} ${inner * 0.58},${inner * 0.22} ${inner * 0.76},${inner * 0.06}`}
             fill="none" stroke={waveColor} strokeWidth="1.4" strokeLinecap="round"
           />
         </g>
-
-        {/* Outer ring text — domain + command count (readable by vision models) */}
         <text fill={textColor} fontSize={size * 0.075} fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="0.18em" fontWeight="700">
-          <textPath href={`#${uid}-outer`} startOffset="2%">
-            {outerText}
-          </textPath>
+          <textPath href={`#${uid}-outer`} startOffset="2%">{outerText}</textPath>
         </text>
-
-        {/* Inner ring text — manifest path + CLI (tiny, for agents) */}
         <text fill={dataColor} fontSize={size * 0.048} fontFamily="'SF Mono', 'JetBrains Mono', monospace" letterSpacing="0.08em" fontWeight="500">
-          <textPath href={`#${uid}-inner`} startOffset="0%">
-            {innerText}
-          </textPath>
+          <textPath href={`#${uid}-inner`} startOffset="0%">{innerText}</textPath>
         </text>
       </g>
     </svg>
@@ -197,12 +225,16 @@ export function SurfBadge({
   })
   const [mounted, setMounted] = useState(false)
   const [hovered, setHovered] = useState(false)
+  const [pressed, setPressed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const rafRef = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
   const microManifest = buildMicroManifest({ endpoint, name, description, commands })
-  const cleanEndpoint = endpoint.replace(/^https?:\/\//, '')
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+    injectPsychStyles()
+  }, [])
 
   // Theme detection
   useEffect(() => {
@@ -230,6 +262,18 @@ export function SurfBadge({
     return () => window.removeEventListener('resize', check)
   }, [])
 
+  // Click outside to close psychedelic mode
+  useEffect(() => {
+    if (!pressed) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setPressed(false)
+      }
+    }
+    const t = setTimeout(() => document.addEventListener('click', handler), 50)
+    return () => { clearTimeout(t); document.removeEventListener('click', handler) }
+  }, [pressed])
+
   // Ambient hue drift
   useEffect(() => {
     let start: number | null = null
@@ -249,7 +293,12 @@ export function SurfBadge({
   }
 
   const sealSize = isMobile ? 34 : 40
-  const expanded = hovered && !isMobile
+
+  // Derived states
+  const psychedelic = pressed
+  const expanded = (hovered && !isMobile) || pressed
+  const showPanel = expanded
+  const displayHue = psychedelic ? hue * 5 : hue
 
   return (
     <>
@@ -266,6 +315,7 @@ export function SurfBadge({
       </div>
 
       <div
+        ref={containerRef}
         className={className}
         style={{
           ...posStyles[position],
@@ -275,37 +325,74 @@ export function SurfBadge({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* ─── Hover Panel (desktop only) ────────────────────── */}
-        {!isMobile && (
+        {/* ─── Info Panel ──────────────────────────────────────── */}
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          [position === 'bottom-right' ? 'right' : 'left']: 0,
+          marginBottom: 10,
+          width: psychedelic ? 300 : 280,
+          opacity: showPanel ? 1 : 0,
+          transform: showPanel
+            ? 'translateY(0) scale(1)'
+            : 'translateY(8px) scale(0.92)',
+          transition: psychedelic
+            ? 'all 500ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+            : 'all 350ms cubic-bezier(0.16, 1, 0.3, 1)',
+          pointerEvents: showPanel ? 'auto' : 'none',
+          background: psychedelic
+            ? `conic-gradient(from ${displayHue}deg, #ff0080, #ff8c00, #ffef00, #40e0d0, #7b61ff, #ff0080)`
+            : 'transparent',
+          padding: psychedelic ? 2 : 0,
+          borderRadius: 16,
+          animation: psychedelic
+            ? dark ? 'surfCardGlow 3s ease-in-out infinite' : 'surfCardGlowLight 3s ease-in-out infinite'
+            : 'none',
+        }}>
           <div style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            marginBottom: 10,
-            width: 280,
-            opacity: expanded ? 1 : 0,
-            transform: expanded ? 'translateY(0) scale(1)' : 'translateY(6px) scale(0.97)',
-            transition: 'all 350ms cubic-bezier(0.16, 1, 0.3, 1)',
-            pointerEvents: expanded ? 'auto' : 'none',
-            background: dark ? 'rgba(12,12,16,0.94)' : 'rgba(255,255,255,0.96)',
+            background: psychedelic
+              ? dark
+                ? `radial-gradient(ellipse at 25% 15%, hsla(${displayHue + 180}, 60%, 18%, 0.5), transparent 55%), radial-gradient(ellipse at 75% 85%, hsla(${displayHue}, 70%, 22%, 0.4), transparent 55%), rgba(8, 5, 18, 0.97)`
+                : `radial-gradient(ellipse at 25% 15%, hsla(${displayHue + 180}, 45%, 88%, 0.5), transparent 55%), radial-gradient(ellipse at 75% 85%, hsla(${displayHue}, 50%, 90%, 0.4), transparent 55%), rgba(255, 252, 255, 0.97)`
+              : dark ? 'rgba(12,12,16,0.94)' : 'rgba(255,255,255,0.96)',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
             borderRadius: 14,
-            border: `1px solid ${dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-            boxShadow: dark
-              ? '0 20px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03)'
-              : '0 20px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
+            border: psychedelic
+              ? 'none'
+              : `1px solid ${dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+            boxShadow: psychedelic
+              ? 'none'
+              : dark
+                ? '0 20px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03)'
+                : '0 20px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
             padding: '16px 18px',
           }}>
             <div style={{
-              fontSize: 13, fontWeight: 700, marginBottom: 6, lineHeight: 1.3,
-              color: dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+              fontSize: psychedelic ? 14 : 13,
+              fontWeight: psychedelic ? 800 : 700,
+              marginBottom: 6,
+              lineHeight: 1.3,
+              ...(psychedelic ? {
+                background: 'linear-gradient(90deg, #ff0080, #ff8c00, #40e0d0, #7b61ff, #ff0080)',
+                backgroundSize: '200% auto',
+                animation: 'surfShimmer 3s linear infinite',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              } as React.CSSProperties : {
+                color: dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+              }),
             }}>
-              This site speaks Surf
+              {psychedelic ? '✦ This site speaks Surf ✦' : 'This site speaks Surf'}
             </div>
+
             <div style={{
-              fontSize: 11, lineHeight: 1.5, marginBottom: commands.length ? 14 : 0,
-              color: dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+              fontSize: 11, lineHeight: 1.5,
+              marginBottom: commands.length ? 14 : 0,
+              color: psychedelic
+                ? dark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.55)'
+                : dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
             }}>
               AI agents can read and interact with this site through structured commands — no scraping needed.
             </div>
@@ -315,23 +402,47 @@ export function SurfBadge({
                 <div style={{
                   fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const,
                   letterSpacing: '0.1em', marginBottom: 8,
-                  color: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
+                  color: psychedelic
+                    ? dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'
+                    : dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
                 }}>
                   {commands.length} thing{commands.length !== 1 ? 's' : ''} agents can do
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
-                  {commands.slice(0, 6).map(cmd => (
-                    <span key={cmd.name} style={{
-                      fontSize: 10, padding: '3px 8px', borderRadius: 6,
-                      background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                      color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
-                      border: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-                    }}>
-                      {cmd.description || cmd.name}
-                    </span>
-                  ))}
+                  {commands.slice(0, 6).map((cmd, i) => {
+                    const pillHue = (displayHue + i * 55) % 360
+                    return (
+                      <span key={cmd.name} style={{
+                        fontSize: 10, padding: '3px 8px', borderRadius: 6,
+                        background: psychedelic
+                          ? dark
+                            ? `hsla(${pillHue}, 65%, 22%, 0.6)`
+                            : `hsla(${pillHue}, 55%, 92%, 0.8)`
+                          : dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                        color: psychedelic
+                          ? dark
+                            ? `hsla(${pillHue}, 80%, 75%, 0.9)`
+                            : `hsla(${pillHue}, 65%, 35%, 0.9)`
+                          : dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                        border: `1px solid ${psychedelic
+                          ? dark
+                            ? `hsla(${pillHue}, 60%, 45%, 0.35)`
+                            : `hsla(${pillHue}, 45%, 65%, 0.35)`
+                          : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                        animation: psychedelic ? `surfPillFloat 2.5s ease-in-out ${i * 0.18}s infinite` : 'none',
+                        transition: 'all 400ms ease',
+                      }}>
+                        {cmd.description || cmd.name}
+                      </span>
+                    )
+                  })}
                   {commands.length > 6 && (
-                    <span style={{ fontSize: 10, padding: '3px 8px', color: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }}>
+                    <span style={{
+                      fontSize: 10, padding: '3px 8px',
+                      color: psychedelic
+                        ? dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)'
+                        : dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                    }}>
                       +{commands.length - 6} more
                     </span>
                   )}
@@ -341,69 +452,102 @@ export function SurfBadge({
 
             <div style={{
               paddingTop: 12,
-              borderTop: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+              borderTop: `1px solid ${psychedelic
+                ? dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+                : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
-              <span style={{ fontSize: 9, color: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)' }}>
+              <span style={{
+                fontSize: 9,
+                ...(psychedelic ? {
+                  background: 'linear-gradient(90deg, #7b61ff, #40e0d0)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  fontWeight: 600,
+                } as React.CSSProperties : {
+                  color: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)',
+                }),
+              }}>
                 Surf Protocol
               </span>
               <a href="https://surf.codes" target="_blank" rel="noopener noreferrer" style={{
                 fontSize: 10, fontWeight: 500, textDecoration: 'none',
-                color: dark ? 'rgba(0,212,255,0.6)' : 'rgba(0,150,190,0.6)',
+                color: psychedelic
+                  ? dark ? 'rgba(0,212,255,0.85)' : 'rgba(0,150,190,0.8)'
+                  : dark ? 'rgba(0,212,255,0.6)' : 'rgba(0,150,190,0.6)',
+                ...(psychedelic ? {
+                  textShadow: dark
+                    ? '0 0 12px rgba(0,212,255,0.4)'
+                    : '0 0 8px rgba(0,150,190,0.2)',
+                } : {}),
               }}>
                 Learn more →
               </a>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* ─── The Badge — just the seal by default ──────────── */}
+        {/* ─── The Badge ───────────────────────────────────────── */}
         <div
+          onClick={() => setPressed(p => !p)}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: expanded ? 10 : 0,
             padding: expanded ? '5px 14px 5px 5px' : '0',
             borderRadius: 999,
-            cursor: 'default',
-            background: expanded
+            cursor: 'pointer',
+            background: psychedelic
               ? dark
-                ? 'linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(123,97,255,0.08) 50%, rgba(255,107,157,0.06) 100%)'
-                : 'linear-gradient(135deg, rgba(0,180,220,0.12) 0%, rgba(100,80,200,0.08) 50%, rgba(220,90,130,0.04) 100%)'
-              : 'transparent',
-            border: expanded
-              ? `1px solid ${dark ? 'rgba(0,212,255,0.2)' : 'rgba(0,150,200,0.25)'}`
-              : '1px solid transparent',
-            boxShadow: expanded
+                ? `linear-gradient(135deg, hsla(${displayHue}, 80%, 25%, 0.4), hsla(${(displayHue + 120) % 360}, 70%, 20%, 0.3), hsla(${(displayHue + 240) % 360}, 80%, 25%, 0.4))`
+                : `linear-gradient(135deg, hsla(${displayHue}, 65%, 88%, 0.6), hsla(${(displayHue + 120) % 360}, 55%, 90%, 0.4), hsla(${(displayHue + 240) % 360}, 65%, 88%, 0.6))`
+              : expanded
+                ? dark
+                  ? 'linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(123,97,255,0.08) 50%, rgba(255,107,157,0.06) 100%)'
+                  : 'linear-gradient(135deg, rgba(0,180,220,0.12) 0%, rgba(100,80,200,0.08) 50%, rgba(220,90,130,0.04) 100%)'
+                : 'transparent',
+            border: psychedelic
+              ? `1px solid ${dark ? `hsla(${displayHue}, 70%, 55%, 0.4)` : `hsla(${displayHue}, 55%, 60%, 0.35)`}`
+              : expanded
+                ? `1px solid ${dark ? 'rgba(0,212,255,0.2)' : 'rgba(0,150,200,0.25)'}`
+                : '1px solid transparent',
+            boxShadow: psychedelic
               ? dark
-                ? '0 4px 24px rgba(0,212,255,0.15), 0 8px 40px rgba(123,97,255,0.1)'
-                : '0 4px 24px rgba(0,150,200,0.15), 0 8px 40px rgba(100,80,200,0.08)'
-              : 'none',
+                ? `0 0 16px hsla(${displayHue}, 80%, 50%, 0.3), 0 0 40px hsla(${(displayHue + 120) % 360}, 70%, 45%, 0.15)`
+                : `0 0 12px hsla(${displayHue}, 60%, 55%, 0.2), 0 0 30px hsla(${(displayHue + 120) % 360}, 50%, 55%, 0.1)`
+              : expanded
+                ? dark
+                  ? '0 4px 24px rgba(0,212,255,0.15), 0 8px 40px rgba(123,97,255,0.1)'
+                  : '0 4px 24px rgba(0,150,200,0.15), 0 8px 40px rgba(100,80,200,0.08)'
+                : 'none',
             transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
             transform: expanded ? 'translateY(-2px) scale(1.04)' : 'scale(1)',
+            animation: psychedelic ? 'surfBadgePulse 3s ease-in-out infinite' : 'none',
             opacity: expanded ? 1 : dark ? 0.5 : 0.65,
             userSelect: 'none' as const,
             overflow: 'hidden',
           }}
-          role="status"
-          aria-label={`Surf-enabled: ${name || endpoint}. ${commands.length} commands available for AI agents.`}
+          role="button"
+          aria-label={`Surf-enabled: ${name || endpoint}. ${commands.length} commands available for AI agents. Click for details.`}
+          aria-expanded={pressed}
         >
-          {/* Seal */}
           <div style={{
             width: sealSize,
             height: sealSize,
             flexShrink: 0,
-            transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
-            transform: expanded ? 'rotate(8deg) scale(1.1)' : 'rotate(0) scale(1)',
-            filter: expanded
+            transition: psychedelic ? 'none' : 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
+            transform: psychedelic ? undefined : expanded ? 'rotate(8deg) scale(1.1)' : 'rotate(0) scale(1)',
+            animation: psychedelic ? 'surfSealSpin 6s linear infinite, surfGlowPulse 3s ease-in-out infinite' : 'none',
+            filter: !psychedelic && expanded
               ? dark
                 ? 'drop-shadow(0 0 8px rgba(0,212,255,0.35)) brightness(1.2)'
                 : 'drop-shadow(0 0 8px rgba(0,160,200,0.25)) brightness(1.1)'
-              : 'none',
+              : !psychedelic ? 'none' : undefined,
           }}>
             <Seal
               size={sealSize}
-              hue={hue}
+              hue={displayHue}
               dark={dark}
               active={expanded}
               endpoint={endpoint}
@@ -411,7 +555,6 @@ export function SurfBadge({
             />
           </div>
 
-          {/* Text label — only visible on desktop hover */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
@@ -424,13 +567,22 @@ export function SurfBadge({
           }}>
             <span style={{
               fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', lineHeight: 1.2,
-              color: dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+              ...(psychedelic ? {
+                background: `linear-gradient(90deg, hsla(${displayHue}, 85%, 70%, 1), hsla(${(displayHue + 90) % 360}, 80%, 65%, 1))`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              } as React.CSSProperties : {
+                color: dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)',
+              }),
             }}>
               Surf-Enabled
             </span>
             <span style={{
               fontSize: 8, letterSpacing: '0.04em', lineHeight: 1.2,
-              color: dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)',
+              color: psychedelic
+                ? dark ? `hsla(${(displayHue + 180) % 360}, 75%, 70%, 0.8)` : `hsla(${(displayHue + 180) % 360}, 55%, 40%, 0.7)`
+                : dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)',
             }}>
               Open for AI agents
             </span>
