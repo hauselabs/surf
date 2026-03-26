@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/client",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "description": "Agent-side client SDK for Surf-enabled sites and apps",
   "type": "module",
   "main": "./dist/index.cjs",
