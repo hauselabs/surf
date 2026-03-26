@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { SurfContext, type ConnectionStatus, type EventCallback, type SurfResult } from './context.js';
+import { registerWindowSurfWs } from './window-surf.js';
 
 /** Props for the SurfProvider component. */
 export interface SurfProviderProps {
@@ -11,6 +12,8 @@ export interface SurfProviderProps {
   auth?: string;
   /** Channels to subscribe to on connect. */
   channels?: string[];
+  /** HTTP endpoint for manifest/execute fallback (e.g. "https://myapp.com"). Used to register window.surf. */
+  endpoint?: string;
   /** Children to render. */
   children: ReactNode;
 }
@@ -39,7 +42,7 @@ const MAX_RECONNECT_DELAY = 30_000;
  * Creates a single WebSocket connection shared via React context.
  * Auto-reconnects with exponential backoff (1s → 2s → 4s → 8s → max 30s).
  */
-export function SurfProvider({ url, auth, channels, children }: SurfProviderProps) {
+export function SurfProvider({ url, auth, channels, endpoint, children }: SurfProviderProps) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [subscribedChannels, setSubscribedChannels] = useState<Set<string>>(new Set());
@@ -167,6 +170,39 @@ export function SurfProvider({ url, auth, channels, children }: SurfProviderProp
       wsRef.current = null;
     };
   }, [connect]);
+
+  // Register window.surf global for browser-based agents
+  useEffect(() => {
+    const statusMap: Record<ConnectionStatus, 'connected' | 'disconnected' | 'connecting'> = {
+      connected: 'connected',
+      connecting: 'connecting',
+      disconnected: 'disconnected',
+      reconnecting: 'connecting',
+    };
+
+    const cleanup = registerWindowSurfWs(
+      {
+        execute: (command: string, params?: Record<string, unknown>) => {
+          const ws = wsRef.current;
+          if (!ws || ws.readyState !== WebSocket.OPEN) {
+            return Promise.reject(new Error('WebSocket not connected'));
+          }
+          const id = `msg_${++msgCounterRef.current}`;
+          return new Promise<{ ok: boolean; result?: unknown; error?: unknown }>((resolve, reject) => {
+            pendingRef.current.set(id, {
+              resolve: (r) => resolve({ ok: r.ok, result: r.result, error: r.error }),
+              reject,
+            });
+            ws.send(JSON.stringify({ type: 'execute', id, command, params: params ?? {} }));
+          });
+        },
+        getStatus: () => statusMap[status] ?? 'disconnected',
+      },
+      endpoint,
+    );
+
+    return cleanup;
+  }, [status, endpoint]);
 
   const execute = useCallback((command: string, params?: Record<string, unknown>): Promise<SurfResult> => {
     const ws = wsRef.current;

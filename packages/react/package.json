@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/react",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "React SDK for Surf Live — real-time state sync between AI agents and your UI",
   "type": "module",
   "main": "./dist/index.cjs",

@@ -12,6 +12,10 @@ export { useSurf, useSurfEvent, useSurfChannel, useSurfState } from './hooks.js'
 export { SurfBadge } from './SurfBadge.js';
 export type { SurfBadgeProps, SurfBadgeCommand } from './SurfBadge.js';
 
+// ─── window.surf ──────────────────────────────────────────────────────────────
+
+export type { SurfGlobal, SurfGlobalCommand, SurfManifest, SurfExecuteResult } from './window-surf.js';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type { SurfContextValue, ConnectionStatus, SurfResult, EventCallback } from './context.js';

@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useContext } from 'react'
+import { SurfContext } from './context.js'
+import { registerWindowSurfHttp } from './window-surf.js'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -243,6 +245,15 @@ export function SurfBadge({
     setMounted(true)
     injectPsychStyles()
   }, [])
+
+  // Register window.surf (HTTP-only) when no SurfProvider is present
+  const surfCtx = useContext(SurfContext)
+  useEffect(() => {
+    // If SurfProvider is active, it handles window.surf registration
+    if (surfCtx) return
+    const cleanup = registerWindowSurfHttp(endpoint)
+    return cleanup
+  }, [endpoint, surfCtx])
 
   // Theme detection
   useEffect(() => {
