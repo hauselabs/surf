@@ -10,22 +10,37 @@ interface WsTransportOptions {
   live?: LiveConfig;
   /** Get last known state for initial delivery on channel subscribe. */
   getChannelState?: (channelId: string) => { state: unknown; version: number } | undefined;
+  /** Interval for ping keepalive in ms. Default: 30000 */
+  pingInterval?: number;
+  /** Timeout for pong response in ms. Default: 10000 */
+  pongTimeout?: number;
 }
 
 interface WebSocketLike {
   on(event: 'message', cb: (data: Buffer | string) => void): void;
   on(event: 'close', cb: () => void): void;
   on(event: 'error', cb: (err: Error) => void): void;
+  on(event: 'pong', cb: () => void): void;
   send(data: string): void;
+  ping(data?: unknown, mask?: boolean, cb?: (err: Error) => void): void;
+  terminate(): void;
+  close(): void;
   readyState: number;
 }
 
 interface WebSocketServerLike {
   on(event: 'connection', cb: (ws: WebSocketLike) => void): void;
+  clients?: Set<WebSocketLike>;
 }
 
 // ws library constants
 const WS_OPEN = 1;
+
+/** Handle returned from attachWebSocket for graceful shutdown. */
+export interface WebSocketHandle {
+  /** Gracefully close all connections and stop ping intervals. */
+  close(): void;
+}
 
 /**
  * Attach Surf WebSocket handling to a ws WebSocketServer.
@@ -43,12 +58,47 @@ const WS_OPEN = 1;
 export function attachWebSocket(
   wss: WebSocketServerLike,
   options: WsTransportOptions,
-): void {
+): WebSocketHandle {
   const { registry, sessions, events, live } = options;
   const liveEnabled = live?.enabled === true;
   const maxChannels = live?.maxChannelsPerConnection ?? 10;
+  const pingIntervalMs = options.pingInterval ?? 30000;
+  const pongTimeoutMs = options.pongTimeout ?? 10000;
+
+  // Track all active connections for graceful shutdown
+  const activeConnections = new Set<WebSocketLike>();
+  const aliveFlags = new Map<WebSocketLike, boolean>();
+  let closed = false;
+
+  // Periodic ping to detect dead clients
+  const heartbeatInterval = pingIntervalMs > 0 ? setInterval(() => {
+    for (const ws of activeConnections) {
+      if (aliveFlags.get(ws) === false) {
+        // No pong received since last ping — terminate
+        ws.terminate();
+        continue;
+      }
+      aliveFlags.set(ws, false);
+      if (ws.readyState === WS_OPEN) {
+        ws.ping();
+      }
+    }
+  }, pingIntervalMs) : null;
 
   wss.on('connection', (ws) => {
+    if (closed) {
+      ws.close();
+      return;
+    }
+
+    activeConnections.add(ws);
+    aliveFlags.set(ws, true);
+
+    // Track pong responses for keepalive
+    ws.on('pong', () => {
+      aliveFlags.set(ws, true);
+    });
+
     let authToken: string | undefined;
     let sessionId: string | undefined;
     const unsubscribes: Array<() => void> = [];
@@ -81,6 +131,9 @@ export function attachWebSocket(
     subscribeToEvents();
 
     ws.on('message', async (raw) => {
+      // Any message counts as activity
+      aliveFlags.set(ws, true);
+
       let msg: WsIncomingMessage;
       try {
         msg = JSON.parse(typeof raw === 'string' ? raw : raw.toString('utf-8')) as WsIncomingMessage;
@@ -276,7 +329,9 @@ export function attachWebSocket(
       }
     });
 
-    ws.on('close', () => {
+    function cleanup(): void {
+      activeConnections.delete(ws);
+      aliveFlags.delete(ws);
       // Clean up all event subscriptions for this connection
       for (const unsub of unsubscribes) {
         unsub();
@@ -291,20 +346,24 @@ export function attachWebSocket(
       if (sessionId) {
         events.removeSession(sessionId);
       }
-    });
+    }
 
-    ws.on('error', () => {
-      for (const unsub of unsubscribes) {
-        unsub();
-      }
-      for (const unsub of channelUnsubscribes.values()) {
-        unsub();
-      }
-      channelUnsubscribes.clear();
-      subscribedChannels.clear();
-      if (sessionId) {
-        events.removeSession(sessionId);
-      }
-    });
+    ws.on('close', cleanup);
+    ws.on('error', cleanup);
   });
+
+  return {
+    close(): void {
+      closed = true;
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      // Gracefully close all active connections
+      for (const ws of activeConnections) {
+        ws.close();
+      }
+      activeConnections.clear();
+      aliveFlags.clear();
+    },
+  };
 }
