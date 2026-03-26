@@ -10,7 +10,7 @@ export interface SseWriter {
   close(): void;
 }
 
-interface SseCompatibleResponse {
+export interface SseCompatibleResponse {
   writeHead(status: number, headers?: Record<string, string>): void;
   write(data: string): boolean;
   end(body?: string): void;

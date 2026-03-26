@@ -5,10 +5,37 @@ import type {
   SurfResponse,
 } from '../types.js';
 import { executePipeline } from '../transport/pipeline.js';
-import { createSseWriter, chunkEvent, doneEvent, errorEvent } from '../transport/sse.js';
+import { createSseWriter, chunkEvent, doneEvent, errorEvent, type SseCompatibleResponse } from '../transport/sse.js';
 import { assertNotPromise } from '../errors.js';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// ─── Minimal interfaces for Fastify types (no hard dependency) ─────────
+
+/** Minimal shape of a Fastify request — only properties we actually access. */
+interface FastifyRequest {
+  headers: Record<string, string | string[] | undefined>;
+  body: unknown;
+}
+
+/** Minimal shape of a Fastify reply — only methods we actually call. */
+interface FastifyReply {
+  code(statusCode: number): FastifyReply;
+  header(key: string, value: string): FastifyReply;
+  headers(values: Record<string, string>): FastifyReply;
+  send(payload?: unknown): FastifyReply;
+  raw: SseCompatibleResponse;
+}
+
+/** Route handler signature used by the Fastify router. */
+type FastifyRouteHandler = (req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply | void>;
+
+/** Minimal shape of a Fastify instance — only methods we actually call. */
+interface FastifyInstance {
+  options(path: string, handler: FastifyRouteHandler): void;
+  get(path: string, handler: FastifyRouteHandler): void;
+  post(path: string, handler: FastifyRouteHandler): void;
+}
+
+// ────────────────────────────────────────────────────────────────────────
 
 /**
  * Creates a Fastify plugin that mounts all Surf HTTP routes.
@@ -63,7 +90,7 @@ export function fastifyPlugin(surf: SurfInstance) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
-  return async function surfPlugin(fastify: any) {
+  return async function surfPlugin(fastify: FastifyInstance) {
     // ─── OPTIONS (CORS preflight) ──────────────────────────────────────
     const optionsRoutes = [
       '/.well-known/surf.json',
@@ -73,14 +100,14 @@ export function fastifyPlugin(surf: SurfInstance) {
       '/surf/session/end',
     ];
     for (const route of optionsRoutes) {
-      fastify.options(route, async (_req: any, reply: any) => {
+      fastify.options(route, async (_req: FastifyRequest, reply: FastifyReply) => {
         return reply.code(204).headers(corsHeaders).send();
       });
     }
 
     // ─── GET /.well-known/surf.json ────────────────────────────────────
-    fastify.get('/.well-known/surf.json', async (req: any, reply: any) => {
-      const token = extractAuth(req.headers as Record<string, string | string[] | undefined>);
+    fastify.get('/.well-known/surf.json', async (req: FastifyRequest, reply: FastifyReply) => {
+      const token = extractAuth(req.headers);
       const manifestData = await surf.manifestForToken(token);
       const etag = `"${manifestData.checksum}"`;
 
@@ -97,7 +124,7 @@ export function fastifyPlugin(surf: SurfInstance) {
     });
 
     // ─── POST /surf/execute ────────────────────────────────────────────
-    fastify.post('/surf/execute', async (req: any, reply: any) => {
+    fastify.post('/surf/execute', async (req: FastifyRequest, reply: FastifyReply) => {
       const body = req.body as ExecuteRequest;
 
       if (!body?.command || typeof body.command !== 'string') {
@@ -107,8 +134,8 @@ export function fastifyPlugin(surf: SurfInstance) {
         });
       }
 
-      const auth = extractAuth(req.headers as Record<string, string | string[] | undefined>);
-      const ip = extractIp(req.headers as Record<string, string | string[] | undefined>);
+      const auth = extractAuth(req.headers);
+      const ip = extractIp(req.headers);
       let sessionState: Record<string, unknown> | undefined;
 
       if (body.sessionId) {
@@ -186,9 +213,9 @@ export function fastifyPlugin(surf: SurfInstance) {
     });
 
     // ─── POST /surf/pipeline ───────────────────────────────────────────
-    fastify.post('/surf/pipeline', async (req: any, reply: any) => {
+    fastify.post('/surf/pipeline', async (req: FastifyRequest, reply: FastifyReply) => {
       const body = req.body as PipelineRequest;
-      const auth = extractAuth(req.headers as Record<string, string | string[] | undefined>);
+      const auth = extractAuth(req.headers);
 
       try {
         const result = await executePipeline(
@@ -209,7 +236,7 @@ export function fastifyPlugin(surf: SurfInstance) {
     });
 
     // ─── POST /surf/session/start ──────────────────────────────────────
-    fastify.post('/surf/session/start', async (_req: any, reply: any) => {
+    fastify.post('/surf/session/start', async (_req: FastifyRequest, reply: FastifyReply) => {
       const session = await sessions.create();
       return reply
         .header('Access-Control-Allow-Origin', '*')
@@ -217,7 +244,7 @@ export function fastifyPlugin(surf: SurfInstance) {
     });
 
     // ─── POST /surf/session/end ────────────────────────────────────────
-    fastify.post('/surf/session/end', async (req: any, reply: any) => {
+    fastify.post('/surf/session/end', async (req: FastifyRequest, reply: FastifyReply) => {
       const body = req.body as { sessionId?: string };
       if (body?.sessionId) {
         await sessions.destroy(body.sessionId);
