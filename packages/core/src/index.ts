@@ -2,6 +2,7 @@
 
 export { createSurf } from './surf.js';
 export type { SurfInstance, SurfLive } from './surf.js';
+export { deepMerge } from './deepMerge.js';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
