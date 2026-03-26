@@ -6,6 +6,7 @@ import type {
 } from '../types.js';
 import { executePipeline } from '../transport/pipeline.js';
 import { createSseWriter, chunkEvent, doneEvent, errorEvent } from '../transport/sse.js';
+import { assertNotPromise } from '../errors.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -24,6 +25,7 @@ import { createSseWriter, chunkEvent, doneEvent, errorEvent } from '../transport
  * ```
  */
 export function fastifyPlugin(surf: SurfInstance) {
+  assertNotPromise(surf);
   const registry = surf.commands;
   const sessions = surf.sessions;
 
