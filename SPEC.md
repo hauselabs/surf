@@ -312,10 +312,11 @@ The manifest `checksum` changes depending on which commands are included, ensuri
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
-| `UNKNOWN_COMMAND` | 404 | Command not found |
+| `UNKNOWN_COMMAND` | 404 | Command not found in manifest |
+| `NOT_FOUND` | 404 | Resource not found (general) |
 | `INVALID_PARAMS` | 400 | Parameter validation failed |
 | `AUTH_REQUIRED` | 401 | Auth required but not provided |
-| `AUTH_FAILED` | 403 | Auth token invalid or insufficient |
+| `AUTH_FAILED` | 403 | Auth token invalid or insufficient scope |
 | `SESSION_EXPIRED` | 410 | Session no longer valid |
 | `RATE_LIMITED` | 429 | Rate limit exceeded |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |
