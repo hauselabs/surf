@@ -2,6 +2,7 @@
 
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { SurfContext, type SurfContextValue, type EventCallback } from './context.js';
+import { deepMerge } from './deepMerge.js';
 
 /**
  * Access the Surf context. Throws if used outside SurfProvider.
@@ -72,7 +73,7 @@ interface PatchEventData {
  * Synced state hook that auto-updates from Surf Live broadcast events.
  *
  * Listens for `surf:state` events and updates local state when received.
- * Also supports `surf:patch` events for incremental updates (shallow merge).
+ * Also supports `surf:patch` events for incremental updates (deep merge).
  *
  * @param key - Optional key to filter state events (matches against channel name)
  * @param initialState - Initial state value
@@ -99,7 +100,7 @@ export function useSurfState<T>(key: string, initialState: T): [T, (value: T | (
     versionRef.current = typed.version;
     setState(prev => {
       if (typeof prev === 'object' && prev !== null && typeof typed.patch === 'object') {
-        return { ...prev, ...typed.patch } as T;
+        return deepMerge(prev as Record<string, unknown>, typed.patch) as T;
       }
       return prev;
     });

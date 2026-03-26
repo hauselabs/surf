@@ -8,6 +8,7 @@ import type { SurfMiddleware } from './middleware.js';
 import { CommandRegistry } from './commands.js';
 import { generateManifest } from './manifest.js';
 import { InMemorySessionStore } from './session.js';
+import { deepMerge } from './deepMerge.js';
 import { EventBus } from './events.js';
 import { createAuthMiddleware } from './auth.js';
 import {
@@ -226,10 +227,10 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
           eventBus.emitToChannel('surf:state', { channel: channelId, state, version }, channelId);
         },
         patchState(channelId: string, patch: unknown) {
-          // Apply shallow merge to cached state
+          // Apply deep merge to cached state
           const current = channelStates.get(channelId);
           if (current && typeof current === 'object' && patch && typeof patch === 'object') {
-            channelStates.set(channelId, { ...(current as Record<string, unknown>), ...(patch as Record<string, unknown>) });
+            channelStates.set(channelId, deepMerge(current as Record<string, unknown>, patch as Record<string, unknown>));
           }
           const version = nextVersion(channelId);
           eventBus.emitToChannel('surf:patch', { channel: channelId, patch, version }, channelId);
