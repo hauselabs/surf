@@ -11,165 +11,121 @@ export interface SurfBadgeCommand {
 }
 
 export interface SurfBadgeProps {
-  /** The URL where the Surf manifest is served (e.g. "https://myapp.com") */
+  /** The URL where the Surf manifest is served */
   endpoint: string
-  /** App name shown on the badge */
+  /** App name */
   name?: string
   /** App description */
   description?: string
-  /** Commands to embed in the badge for vision model discovery */
+  /** Commands to embed for vision model discovery */
   commands?: SurfBadgeCommand[]
   /** Badge placement */
-  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'inline'
-  /** Size variant */
-  size?: 'sm' | 'md' | 'lg'
-  /** Custom className for the outer container */
+  position?: 'bottom-right' | 'bottom-left' | 'inline'
+  /** Custom className */
   className?: string
-  /** Show expanded detail view on hover (default true) */
-  expandOnHover?: boolean
+  /** Force dark or light mode (auto-detects by default) */
+  theme?: 'dark' | 'light' | 'auto'
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function compactParams(params?: SurfBadgeCommand['params']): string {
-  if (!params) return ''
-  return Object.entries(params)
-    .map(([k, v]) => `${k}${v.required ? '*' : ''}:${v.type || 'any'}`)
-    .join(',')
-}
-
 function buildMicroManifest(props: SurfBadgeProps): string {
-  const lines: string[] = [
-    `SURF_ENDPOINT=${props.endpoint}/.well-known/surf.json`,
-    `SURF_CLI=surf exec ${props.endpoint}`,
+  const lines = [
+    `[SURF PROTOCOL — AI AGENT INTERFACE]`,
+    `This website exposes structured commands for AI agents.`,
+    `MANIFEST: ${props.endpoint}/.well-known/surf.json`,
+    `CLI: surf exec ${props.endpoint.replace(/^https?:\/\//, '')} <command>`,
+    `PING: surf ping ${props.endpoint.replace(/^https?:\/\//, '')}`,
   ]
-  if (props.name) lines.push(`APP=${props.name}`)
-  if (props.description) lines.push(`DESC=${props.description}`)
+  if (props.name) lines.push(`APP: ${props.name}`)
+  if (props.description) lines.push(`ABOUT: ${props.description}`)
   if (props.commands?.length) {
-    lines.push(`COMMANDS=${props.commands.length}`)
-    props.commands.forEach((cmd) => {
-      const p = compactParams(cmd.params)
-      lines.push(`  ${cmd.name}(${p})${cmd.description ? ' — ' + cmd.description : ''}`)
+    lines.push(`COMMANDS (${props.commands.length}):`)
+    props.commands.forEach(cmd => {
+      lines.push(`  → ${cmd.name}${cmd.description ? ' — ' + cmd.description : ''}`)
     })
   }
   return lines.join('\n')
 }
 
-// ─── Badge dimensions ─────────────────────────────────────────────────────────
+// ─── Seal SVG ─────────────────────────────────────────────────────────────────
 
-const SIZES = {
-  sm: { w: 200, h: 56, seal: 36, fontSize: 9, labelSize: 7 },
-  md: { w: 260, h: 68, seal: 44, fontSize: 10, labelSize: 8 },
-  lg: { w: 320, h: 80, seal: 52, fontSize: 11, labelSize: 9 },
-}
-
-// ─── Holographic Seal SVG ─────────────────────────────────────────────────────
-
-function HolographicSeal({ size, animate }: { size: number; animate: boolean }) {
+function Seal({ size, hue, dark }: { size: number; hue: number; dark: boolean }) {
   const r = size / 2
-  const inner = r * 0.7
-  const tickCount = 48
+  const inner = r * 0.65
+  const tickCount = 72
+
+  const strokeMain = dark
+    ? `hsla(${200 + hue * 0.15}, 40%, 70%, 0.55)`
+    : `hsla(${210 + hue * 0.15}, 35%, 40%, 0.4)`
+  const strokeAccent = dark
+    ? `hsla(${260 + hue * 0.1}, 35%, 65%, 0.35)`
+    : `hsla(${250 + hue * 0.1}, 30%, 50%, 0.25)`
+  const textColor = dark
+    ? `hsla(${200 + hue * 0.15}, 30%, 65%, 0.5)`
+    : `hsla(${210 + hue * 0.15}, 25%, 40%, 0.35)`
+  const waveColor = dark
+    ? `hsla(${200 + hue * 0.15}, 50%, 75%, 0.7)`
+    : `hsla(${210 + hue * 0.15}, 40%, 45%, 0.55)`
+
   const ticks = Array.from({ length: tickCount }, (_, i) => {
     const angle = (i / tickCount) * Math.PI * 2
-    const r1 = r * 0.82
-    const r2 = i % 3 === 0 ? r * 0.92 : r * 0.87
+    const isMain = i % 6 === 0
+    const isMid = i % 3 === 0
+    const r1 = r * 0.80
+    const r2 = isMain ? r * 0.94 : isMid ? r * 0.88 : r * 0.85
     return {
-      x1: r + Math.cos(angle) * r1,
-      y1: r + Math.sin(angle) * r1,
-      x2: r + Math.cos(angle) * r2,
-      y2: r + Math.sin(angle) * r2,
+      x1: r + Math.cos(angle) * r1, y1: r + Math.sin(angle) * r1,
+      x2: r + Math.cos(angle) * r2, y2: r + Math.sin(angle) * r2,
+      w: isMain ? 0.6 : 0.25,
+      o: isMain ? 0.7 : isMid ? 0.4 : 0.2,
     }
   })
 
+  const guilloche = (offset: number, amp: number, freq: number, steps: number) =>
+    Array.from({ length: steps + 1 }, (_, i) => {
+      const a = (i / steps) * Math.PI * 2
+      const wave = amp * Math.sin(a * freq + offset)
+      const rad = inner * 0.45 + wave
+      return `${r + Math.cos(a) * rad},${r + Math.sin(a) * rad}`
+    }).join(' ')
+
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
       <defs>
-        <linearGradient id="surf-holo-1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00D4FF" stopOpacity="0.9" />
-          <stop offset="25%" stopColor="#7B61FF" stopOpacity="0.8" />
-          <stop offset="50%" stopColor="#FF6B9D" stopOpacity="0.7" />
-          <stop offset="75%" stopColor="#00E5A0" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="#00D4FF" stopOpacity="0.9" />
-          {animate && (
-            <animateTransform
-              attributeName="gradientTransform"
-              type="rotate"
-              values="0 0.5 0.5;360 0.5 0.5"
-              dur="8s"
-              repeatCount="indefinite"
-            />
-          )}
-        </linearGradient>
-        <linearGradient id="surf-holo-2" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#FFD700" stopOpacity="0.6" />
-          <stop offset="50%" stopColor="#FF6B9D" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#7B61FF" stopOpacity="0.6" />
-          {animate && (
-            <animateTransform
-              attributeName="gradientTransform"
-              type="rotate"
-              values="360 0.5 0.5;0 0.5 0.5"
-              dur="12s"
-              repeatCount="indefinite"
-            />
-          )}
-        </linearGradient>
-        <filter id="surf-glow">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
+        <clipPath id="sb-c"><circle cx={r} cy={r} r={r * 0.96} /></clipPath>
       </defs>
-
-      {/* Outer ring with ticks — like a coin edge */}
-      <circle cx={r} cy={r} r={r * 0.95} fill="none" stroke="url(#surf-holo-1)" strokeWidth="0.8" opacity="0.6" />
-      <circle cx={r} cy={r} r={r * 0.80} fill="none" stroke="url(#surf-holo-2)" strokeWidth="0.5" opacity="0.4" />
-
-      {/* Precision ticks */}
-      {ticks.map((t, i) => (
-        <line
-          key={i}
-          x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-          stroke="url(#surf-holo-1)"
-          strokeWidth={i % 6 === 0 ? '0.8' : '0.4'}
-          opacity={i % 6 === 0 ? 0.8 : 0.4}
-        />
-      ))}
-
-      {/* Inner circle */}
-      <circle cx={r} cy={r} r={inner} fill="none" stroke="url(#surf-holo-1)" strokeWidth="1" filter="url(#surf-glow)" />
-
-      {/* Surf wave glyph */}
-      <g transform={`translate(${r - inner * 0.5}, ${r - inner * 0.15})`}>
-        <path
-          d={`M0,${inner * 0.15} Q${inner * 0.25},${-inner * 0.15} ${inner * 0.5},${inner * 0.15} Q${inner * 0.75},${inner * 0.45} ${inner},${inner * 0.15}`}
-          fill="none"
-          stroke="url(#surf-holo-1)"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          filter="url(#surf-glow)"
-        />
+      <g clipPath="url(#sb-c)">
+        <polyline points={guilloche(0, inner * 0.14, 9, 200)} fill="none" stroke={strokeAccent} strokeWidth="0.3" opacity="0.3" />
+        <polyline points={guilloche(2, inner * 0.11, 13, 200)} fill="none" stroke={strokeMain} strokeWidth="0.25" opacity="0.2" />
+        <polyline points={guilloche(4, inner * 0.09, 18, 200)} fill="none" stroke={strokeAccent} strokeWidth="0.2" opacity="0.15" />
+        <circle cx={r} cy={r} r={r * 0.96} fill="none" stroke={strokeMain} strokeWidth="0.7" />
+        <circle cx={r} cy={r} r={r * 0.78} fill="none" stroke={strokeMain} strokeWidth="0.25" opacity="0.3" />
+        {ticks.map((t, i) => (
+          <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+            stroke={strokeMain} strokeWidth={t.w} opacity={t.o} />
+        ))}
+        <circle cx={r} cy={r} r={inner} fill="none" stroke={strokeMain} strokeWidth="0.6" opacity="0.6" />
+        <g transform={`translate(${r - inner * 0.4}, ${r - inner * 0.08})`}>
+          <path
+            d={`M0,${inner * 0.08} C${inner * 0.18},${-inner * 0.1} ${inner * 0.3},${inner * 0.26} ${inner * 0.44},${inner * 0.08} C${inner * 0.58},${-inner * 0.1} ${inner * 0.62},${inner * 0.26} ${inner * 0.8},${inner * 0.08}`}
+            fill="none" stroke={waveColor} strokeWidth="1.4" strokeLinecap="round"
+          />
+        </g>
+        <defs>
+          <path id="sb-ct" d={`M ${r},${r} m ${-r * 0.7},0 a ${r * 0.7},${r * 0.7} 0 1,1 ${r * 1.4},0 a ${r * 0.7},${r * 0.7} 0 1,1 ${-r * 1.4},0`} />
+        </defs>
+        <text fill={textColor} fontSize={size * 0.08} fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="0.2em" fontWeight="600">
+          <textPath href="#sb-ct" startOffset="3%">
+            SURF PROTOCOL ✦ VERIFIED ✦ AI-NATIVE ✦
+          </textPath>
+        </text>
       </g>
-
-      {/* Circular text: "SURF PROTOCOL • VERIFIED •" */}
-      <defs>
-        <path
-          id="surf-circle-text"
-          d={`M ${r},${r} m ${-r * 0.66},0 a ${r * 0.66},${r * 0.66} 0 1,1 ${r * 1.32},0 a ${r * 0.66},${r * 0.66} 0 1,1 ${-r * 1.32},0`}
-        />
-      </defs>
-      <text fill="url(#surf-holo-1)" fontSize={size * 0.115} fontFamily="system-ui, -apple-system, sans-serif" letterSpacing="0.15em" fontWeight="600">
-        <textPath href="#surf-circle-text" startOffset="0%">
-          SURF PROTOCOL • VERIFIED • AI-READY •
-        </textPath>
-      </text>
     </svg>
   )
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── SurfBadge ────────────────────────────────────────────────────────────────
 
 export function SurfBadge({
   endpoint,
@@ -177,261 +133,121 @@ export function SurfBadge({
   description,
   commands = [],
   position = 'bottom-right',
-  size = 'md',
   className = '',
-  expandOnHover = true,
+  theme = 'auto',
 }: SurfBadgeProps) {
-  const [expanded, setExpanded] = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-  const badgeRef = useRef<HTMLDivElement>(null)
-  const dims = SIZES[size]
+  const [hue, setHue] = useState(0)
+  const [dark, setDark] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const rafRef = useRef(0)
   const microManifest = buildMicroManifest({ endpoint, name, description, commands })
+  const cleanEndpoint = endpoint.replace(/^https?:\/\//, '')
 
-  // Track mouse for holographic shimmer
   useEffect(() => {
-    if (!badgeRef.current) return
-    const el = badgeRef.current
-    const handler = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect()
-      setMousePos({
-        x: ((e.clientX - rect.left) / rect.width) * 100,
-        y: ((e.clientY - rect.top) / rect.height) * 100,
-      })
+    if (theme !== 'auto') { setDark(theme === 'dark'); return }
+    const check = () => setDark(
+      document.documentElement.classList.contains('dark') ||
+      window.matchMedia('(prefers-color-scheme: dark)').matches
+    )
+    check()
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    mq.addEventListener('change', check)
+    const obs = new MutationObserver(check)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => { mq.removeEventListener('change', check); obs.disconnect() }
+  }, [theme])
+
+  useEffect(() => {
+    let start: number | null = null
+    const tick = (ts: number) => {
+      if (!start) start = ts
+      setHue(((ts - start) / 120) % 360)
+      rafRef.current = requestAnimationFrame(tick)
     }
-    el.addEventListener('mousemove', handler)
-    return () => el.removeEventListener('mousemove', handler)
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
   }, [])
 
-  const positionStyles: Record<string, React.CSSProperties> = {
-    'bottom-right': { position: 'fixed', bottom: 16, right: 16, zIndex: 9999 },
-    'bottom-left': { position: 'fixed', bottom: 16, left: 16, zIndex: 9999 },
-    'top-right': { position: 'fixed', top: 16, right: 16, zIndex: 9999 },
-    'top-left': { position: 'fixed', top: 16, left: 16, zIndex: 9999 },
-    'inline': { position: 'relative' },
+  const posStyles: Record<string, React.CSSProperties> = {
+    'bottom-right': { position: 'fixed', bottom: 18, right: 18, zIndex: 9999 },
+    'bottom-left': { position: 'fixed', bottom: 18, left: 18, zIndex: 9999 },
+    'inline': { position: 'relative', display: 'inline-flex' },
   }
+
+  const sealSize = 38
 
   return (
     <>
-      {/* Machine-readable context for vision models — rendered but visually hidden */}
       <div
         aria-hidden="true"
-        style={{
-          position: 'absolute',
-          width: 1,
-          height: 1,
-          overflow: 'hidden',
-          clip: 'rect(0,0,0,0)',
-          whiteSpace: 'pre',
-        }}
         data-surf-badge="true"
         data-surf-endpoint={endpoint}
         data-surf-manifest={`${endpoint}/.well-known/surf.json`}
+        data-surf-commands={commands.map(c => c.name).join(',')}
+        style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'pre' }}
       >
         {microManifest}
       </div>
 
-      <div
-        ref={badgeRef}
+      <a
         className={className}
+        href={`${endpoint}/.well-known/surf.json`}
+        target="_blank"
+        rel="noopener noreferrer"
         style={{
-          ...positionStyles[position],
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          ...posStyles[position],
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '4px 12px 4px 4px',
+          borderRadius: sealSize,
+          textDecoration: 'none',
+          cursor: 'pointer',
+          background: dark
+            ? `rgba(255,255,255,${hovered ? 0.06 : 0.03})`
+            : `rgba(0,0,0,${hovered ? 0.05 : 0.02})`,
+          border: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+          boxShadow: hovered
+            ? dark
+              ? '0 2px 16px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.04)'
+              : '0 2px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.03)'
+            : 'none',
+          transition: 'all 400ms cubic-bezier(0.16, 1, 0.3, 1)',
+          transform: hovered ? 'scale(1.02)' : 'scale(1)',
+          opacity: hovered ? 1 : 0.7,
+          userSelect: 'none' as const,
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         }}
-        onMouseEnter={() => expandOnHover && setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
+        title={`Surf Protocol · ${commands.length} commands · ${cleanEndpoint}`}
+        aria-label={`Surf-enabled: ${name || endpoint}. ${commands.length} commands. Click to view manifest.`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
       >
-        {/* ─── Expanded Panel ─────────────────────────────────────────── */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            right: 0,
-            marginBottom: 8,
-            width: Math.max(dims.w + 40, 300),
-            opacity: expanded ? 1 : 0,
-            transform: expanded ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.96)',
-            transition: 'all 250ms cubic-bezier(0.16, 1, 0.3, 1)',
-            pointerEvents: expanded ? 'auto' : 'none',
-            background: 'rgba(10, 10, 14, 0.92)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderRadius: 14,
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
-            padding: '16px 18px',
-            color: '#e8e8e6',
-          }}
-        >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#00E5A0', boxShadow: '0 0 8px rgba(0, 229, 160, 0.5)' }} />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
-              Surf-Enabled Application
-            </span>
-          </div>
-
-          {name && (
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2, color: '#fff' }}>{name}</div>
-          )}
-          {description && (
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 12, lineHeight: 1.4 }}>{description}</div>
-          )}
-
-          {/* CLI entry point */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.04)',
-            borderRadius: 8,
-            padding: '8px 10px',
-            marginBottom: commands.length ? 12 : 0,
-            fontFamily: '"JetBrains Mono", "SF Mono", "Fira Code", monospace',
-            fontSize: 10,
-            color: '#00D4FF',
-            border: '1px solid rgba(0, 212, 255, 0.12)',
-          }}>
-            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, marginBottom: 4, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              CLI / Agent Entry
-            </div>
-            <div>surf exec {endpoint.replace(/^https?:\/\//, '')} &lt;command&gt;</div>
-            <div style={{ color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
-              surf ping {endpoint.replace(/^https?:\/\//, '')}
-            </div>
-          </div>
-
-          {/* Commands list */}
-          {commands.length > 0 && (
-            <div>
-              <div style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', marginBottom: 6 }}>
-                {commands.length} Available Command{commands.length > 1 ? 's' : ''}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {commands.map((cmd) => (
-                  <div key={cmd.name} style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: 6,
-                    fontSize: 10,
-                    padding: '3px 0',
-                  }}>
-                    <code style={{
-                      fontFamily: '"JetBrains Mono", "SF Mono", monospace',
-                      color: '#7B61FF',
-                      fontSize: 10,
-                      flexShrink: 0,
-                    }}>
-                      {cmd.name}
-                    </code>
-                    {cmd.description && (
-                      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, lineHeight: 1.3 }}>
-                        {cmd.description}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Manifest link */}
-          <div style={{
-            marginTop: 12,
-            paddingTop: 10,
-            borderTop: '1px solid rgba(255,255,255,0.06)',
-            fontSize: 9,
-            color: 'rgba(255,255,255,0.25)',
-            display: 'flex',
-            justifyContent: 'space-between',
-          }}>
-            <span>Protocol: Surf v0.3</span>
-            <a
-              href={`${endpoint}/.well-known/surf.json`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'rgba(0, 212, 255, 0.6)', textDecoration: 'none' }}
-            >
-              View Manifest →
-            </a>
-          </div>
+        <div style={{
+          width: sealSize, height: sealSize, flexShrink: 0,
+          opacity: hovered ? 1 : 0.8, transition: 'opacity 400ms ease',
+        }}>
+          <Seal size={sealSize} hue={hue} dark={dark} />
         </div>
-
-        {/* ─── Main Badge ─────────────────────────────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '6px 14px 6px 6px',
-            borderRadius: dims.seal + 4,
-            cursor: 'pointer',
-            background: `radial-gradient(ellipse at ${mousePos.x}% ${mousePos.y}%, rgba(0, 212, 255, 0.08) 0%, rgba(10, 10, 14, 0.88) 60%)`,
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-            transition: 'all 300ms cubic-bezier(0.16, 1, 0.3, 1)',
-            transform: expanded ? 'scale(1.02)' : 'scale(1)',
-            userSelect: 'none',
-          }}
-          role="button"
-          tabIndex={0}
-          aria-label={`Surf-enabled: ${name || endpoint}. ${commands.length} commands available.`}
-          title={`This app supports the Surf protocol.\n${microManifest}`}
-        >
-          {/* Holographic seal */}
-          <div style={{
-            width: dims.seal,
-            height: dims.seal,
-            flexShrink: 0,
-            filter: `hue-rotate(${mousePos.x * 0.5}deg)`,
-            transition: 'filter 500ms ease',
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{
+            fontSize: 10, fontWeight: 600, letterSpacing: '0.06em',
+            color: dark
+              ? `rgba(255,255,255,${hovered ? 0.75 : 0.55})`
+              : `rgba(0,0,0,${hovered ? 0.65 : 0.45})`,
+            lineHeight: 1.2, transition: 'color 300ms ease',
           }}>
-            <HolographicSeal size={dims.seal} animate={true} />
-          </div>
-
-          {/* Text */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: dims.fontSize,
-              fontWeight: 700,
-              letterSpacing: '-0.01em',
-              color: '#f0f0ee',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
-            }}>
-              Surf-Enabled
-            </div>
-            <div style={{
-              fontSize: dims.labelSize,
-              color: 'rgba(255, 255, 255, 0.35)',
-              letterSpacing: '0.03em',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
-              {commands.length} command{commands.length !== 1 ? 's' : ''} • AI-ready
-            </div>
-          </div>
-
-          {/* Pulse dot */}
-          <div style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: '#00E5A0',
-            boxShadow: '0 0 6px rgba(0, 229, 160, 0.6)',
-            flexShrink: 0,
-            animation: 'surf-pulse 3s ease-in-out infinite',
-          }} />
+            Surf-Enabled
+          </span>
+          <span style={{
+            fontSize: 8, letterSpacing: '0.04em',
+            color: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
+            lineHeight: 1.2,
+          }}>
+            {commands.length} command{commands.length !== 1 ? 's' : ''} · AI-native
+          </span>
         </div>
-
-        {/* Keyframe animation */}
-        <style>{`
-          @keyframes surf-pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.85); }
-          }
-        `}</style>
-      </div>
+      </a>
     </>
   )
 }
