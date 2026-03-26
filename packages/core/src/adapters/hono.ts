@@ -5,6 +5,7 @@ import type {
   SurfResponse,
 } from '../types.js';
 import { executePipeline } from '../transport/pipeline.js';
+import { assertNotPromise } from '../errors.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -23,6 +24,7 @@ import { executePipeline } from '../transport/pipeline.js';
  * ```
  */
 function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
+  assertNotPromise(surf);
   const app = new Hono();
 
   const registry = surf.commands;

@@ -4,7 +4,7 @@ import type {
   PipelineRequest,
   SurfResponse,
 } from '@surfjs/core';
-import { executePipeline } from '@surfjs/core';
+import { executePipeline, assertNotPromise } from '@surfjs/core';
 import {
   getErrorStatus,
   extractAuth,
@@ -72,6 +72,7 @@ function headerValue(val: string | string[] | undefined): string | undefined {
 export function createSurfApiHandler(
   surf: SurfInstance,
 ): (req: PagesApiRequest, res: PagesApiResponse) => Promise<void> {
+  assertNotPromise(surf);
   const registry = surf.commands;
   const sessions = surf.sessions;
 

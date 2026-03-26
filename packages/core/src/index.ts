@@ -95,6 +95,7 @@ export {
   internalError,
   notSupported,
   notFound,
+  assertNotPromise,
 } from './errors.js';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────

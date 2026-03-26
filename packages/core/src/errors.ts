@@ -64,3 +64,17 @@ export function internalError(message?: string): SurfError {
 export function notSupported(command: string): SurfError {
   return new SurfError('NOT_SUPPORTED', `Command not available: ${command}`, { command });
 }
+
+// ─── Guard rails ────────────────────────────────────────────────────────────
+
+/**
+ * Throws a clear error if the given value looks like a Promise (i.e. has a `.then` method).
+ * This catches the common mistake of forgetting to `await createSurf()`.
+ */
+export function assertNotPromise(surf: unknown): void {
+  if (surf && typeof (surf as { then?: unknown }).then === 'function') {
+    throw new Error(
+      'Did you forget to await createSurf()? Received a Promise instead of a SurfInstance.',
+    );
+  }
+}
