@@ -57,6 +57,7 @@ interface SurfManifest {
   name?: string;
   description?: string;
   version?: string;
+  baseUrl?: string;
   commands?: Record<string, CommandSchema>;
 }
 
@@ -391,7 +392,7 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
 
   const executeStart = performance.now();
   try {
-    const executePath = opts.basePath ?? '/surf/execute';
+    const executePath = opts.basePath ?? (manifest.baseUrl ? `${manifest.baseUrl}/execute` : '/surf/execute');
     const executeUrl = new URL(executePath, siteUrl).toString();
     const res = await fetch(executeUrl, {
       method: 'POST',
