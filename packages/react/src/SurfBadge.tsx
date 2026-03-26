@@ -260,7 +260,7 @@ export function SurfBadge({
               ? dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)'
               : dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)',
           }}>
-            AI agents can interact with this site
+            Open for AI agents
           </span>
         </div>
       </a>
