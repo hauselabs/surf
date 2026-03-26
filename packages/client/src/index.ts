@@ -2,6 +2,7 @@ export { SurfClient, SurfClientError } from './client.js';
 export { discoverManifest } from './discovery.js';
 export { HttpTransport } from './transport/http.js';
 export { WebSocketTransport } from './transport/websocket.js';
+export type { ConnectionState, WebSocketTransportOptions } from './transport/websocket.js';
 export { WindowTransport } from './transport/window.js';
 
 export type {
