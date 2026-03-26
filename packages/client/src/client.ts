@@ -167,7 +167,7 @@ export class SurfClient {
   readonly manifest: SurfManifest;
   private readonly http: HttpTransport;
   private readonly baseUrl: string;
-  private readonly auth?: string;
+  private auth?: string;
   private readonly retryConfig?: RetryConfig;
   private readonly cache?: ResponseCache;
   private readonly surfBasePath: string;
@@ -221,6 +221,17 @@ export class SurfClient {
   /** Get a specific command definition. */
   command(name: string): ManifestCommand | undefined {
     return this.manifest.commands[name];
+  }
+
+  /**
+   * Update the auth token at runtime.
+   *
+   * Useful for OAuth2 token rotation — the new token is used for all
+   * subsequent HTTP requests and WebSocket messages without reconnecting.
+   */
+  setAuth(token: string | undefined): void {
+    this.auth = token;
+    this.http.setAuth(token);
   }
 
   /**
