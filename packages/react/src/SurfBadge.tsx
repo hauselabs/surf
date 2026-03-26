@@ -190,27 +190,104 @@ export function SurfBadge({
         {microManifest}
       </div>
 
-      <a
+      <div
         className={className}
-        href={`${endpoint}/.well-known/surf.json`}
-        target="_blank"
-        rel="noopener noreferrer"
         style={{
           ...posStyles[position],
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '5px 14px 5px 5px',
-          borderRadius: sealSize,
-          textDecoration: 'none',
-          cursor: 'pointer',
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* ─── Hover Panel ─────────────────────────────────────── */}
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: 0,
+          marginBottom: 10,
+          width: 280,
+          opacity: hovered ? 1 : 0,
+          transform: hovered ? 'translateY(0) scale(1)' : 'translateY(6px) scale(0.97)',
+          transition: 'all 350ms cubic-bezier(0.16, 1, 0.3, 1)',
+          pointerEvents: hovered ? 'auto' : 'none',
+          background: dark ? 'rgba(12,12,16,0.94)' : 'rgba(255,255,255,0.96)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderRadius: 14,
+          border: `1px solid ${dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+          boxShadow: dark
+            ? '0 20px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03)'
+            : '0 20px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
+          padding: '16px 18px',
+        }}>
+          <div style={{
+            fontSize: 13, fontWeight: 700, marginBottom: 6, lineHeight: 1.3,
+            color: dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
+          }}>
+            This site speaks Surf
+          </div>
+          <div style={{
+            fontSize: 11, lineHeight: 1.5, marginBottom: 14,
+            color: dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+          }}>
+            AI agents can read and interact with this site through structured commands — no scraping needed.
+          </div>
+
+          {commands.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const,
+                letterSpacing: '0.1em', marginBottom: 8,
+                color: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)',
+              }}>
+                {commands.length} thing{commands.length !== 1 ? 's' : ''} agents can do
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
+                {commands.slice(0, 6).map(cmd => (
+                  <span key={cmd.name} style={{
+                    fontSize: 10, padding: '3px 8px', borderRadius: 6,
+                    background: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                    color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                    border: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+                  }}>
+                    {cmd.description || cmd.name}
+                  </span>
+                ))}
+                {commands.length > 6 && (
+                  <span style={{ fontSize: 10, padding: '3px 8px', color: dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }}>
+                    +{commands.length - 6} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{
+            paddingTop: 12,
+            borderTop: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 9, color: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)' }}>
+              Surf Protocol
+            </span>
+            <a href="https://surf.codes" target="_blank" rel="noopener noreferrer" style={{
+              fontSize: 10, fontWeight: 500, textDecoration: 'none',
+              color: dark ? 'rgba(0,212,255,0.6)' : 'rgba(0,150,190,0.6)',
+            }}>
+              Learn more →
+            </a>
+          </div>
+        </div>
+
+        {/* ─── Badge Pill ──────────────────────────────────────── */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 10,
+          padding: '5px 14px 5px 5px', borderRadius: sealSize, cursor: 'default',
           background: hovered
             ? dark
               ? 'linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(123,97,255,0.07) 50%, rgba(255,107,157,0.05) 100%)'
               : 'linear-gradient(135deg, rgba(0,180,220,0.08) 0%, rgba(100,80,200,0.05) 50%, rgba(220,90,130,0.03) 100%)'
-            : dark
-              ? 'rgba(255,255,255,0.02)'
-              : 'rgba(0,0,0,0.01)',
+            : dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
           border: hovered
             ? `1px solid ${dark ? 'rgba(0,212,255,0.18)' : 'rgba(0,160,200,0.12)'}`
             : `1px solid ${dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
@@ -223,47 +300,45 @@ export function SurfBadge({
           transform: hovered ? 'translateY(-2px) scale(1.04)' : 'scale(1)',
           opacity: hovered ? 1 : 0.5,
           userSelect: 'none' as const,
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
         }}
-        title={`Surf Protocol · ${commands.length} commands · ${cleanEndpoint}`}
-        aria-label={`Surf-enabled: ${name || endpoint}. ${commands.length} commands. Click to view manifest.`}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
-        <div style={{
-          width: sealSize, height: sealSize, flexShrink: 0,
-          opacity: hovered ? 1 : 0.65,
-          transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
-          transform: hovered ? 'rotate(8deg) scale(1.12)' : 'rotate(0) scale(1)',
-          filter: hovered
-            ? dark
-              ? 'drop-shadow(0 0 8px rgba(0,212,255,0.35)) brightness(1.2)'
-              : 'drop-shadow(0 0 8px rgba(0,160,200,0.25)) brightness(1.1)'
-            : 'none',
-        }}>
-          <Seal size={sealSize} hue={hue} dark={dark} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{
-            fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', lineHeight: 1.2,
-            transition: 'color 400ms ease',
-            color: hovered
-              ? dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)'
-              : dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.28)',
+          role="status"
+          aria-label={`Surf-enabled: ${name || endpoint}. ${commands.length} commands available for AI agents.`}
+        >
+          <div style={{
+            width: sealSize, height: sealSize, flexShrink: 0,
+            opacity: hovered ? 1 : 0.65,
+            transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
+            transform: hovered ? 'rotate(8deg) scale(1.12)' : 'rotate(0) scale(1)',
+            filter: hovered
+              ? dark
+                ? 'drop-shadow(0 0 8px rgba(0,212,255,0.35)) brightness(1.2)'
+                : 'drop-shadow(0 0 8px rgba(0,160,200,0.25)) brightness(1.1)'
+              : 'none',
           }}>
-            Surf-Enabled
-          </span>
-          <span style={{
-            fontSize: 8, letterSpacing: '0.04em', lineHeight: 1.2,
-            transition: 'color 400ms ease',
-            color: hovered
-              ? dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)'
-              : dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)',
-          }}>
-            Open for AI agents
-          </span>
+            <Seal size={sealSize} hue={hue} dark={dark} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', lineHeight: 1.2,
+              transition: 'color 400ms ease',
+              color: hovered
+                ? dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)'
+                : dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.28)',
+            }}>
+              Surf-Enabled
+            </span>
+            <span style={{
+              fontSize: 8, letterSpacing: '0.04em', lineHeight: 1.2,
+              transition: 'color 400ms ease',
+              color: hovered
+                ? dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)'
+                : dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)',
+            }}>
+              Open for AI agents
+            </span>
+          </div>
         </div>
-      </a>
+      </div>
     </>
   )
 }
