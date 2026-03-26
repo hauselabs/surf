@@ -7,7 +7,42 @@ import type {
 import { executePipeline } from '../transport/pipeline.js';
 import { assertNotPromise } from '../errors.js';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+// ─── Minimal interfaces for Hono types (no hard dependency) ────────────
+
+/** Minimal shape of a Hono request object — only methods we actually call. */
+interface HonoRequest {
+  json(): Promise<unknown>;
+  header(name: string): string | undefined;
+}
+
+/** Minimal shape of a Hono context — only methods/properties we actually call. */
+interface HonoContext {
+  req: HonoRequest;
+  json(data: unknown, status?: number, headers?: Record<string, string>): Response;
+  body(data: null, status?: number, headers?: Record<string, string>): Response;
+}
+
+/** Route handler signature used by the Hono router. */
+type HonoHandler = (c: HonoContext) => Response | Promise<Response>;
+
+/** Minimal shape of a Hono app instance — only methods we actually call. */
+interface HonoApp {
+  options(path: string, handler: HonoHandler): void;
+  get(path: string, handler: HonoHandler): void;
+  post(path: string, handler: HonoHandler): void;
+  fetch(request: Request, env?: unknown, ctx?: unknown): Response | Promise<Response>;
+}
+
+/** Constructor for a Hono app. */
+type HonoConstructor = new () => HonoApp;
+
+// ─── Hono module shape for dynamic import ──────────────────────────────
+
+interface HonoModule {
+  Hono: HonoConstructor;
+}
+
+// ────────────────────────────────────────────────────────────────────────
 
 /**
  * Creates a Hono sub-app that mounts all Surf routes.
@@ -23,23 +58,23 @@ import { assertNotPromise } from '../errors.js';
  * app.route('/', honoApp(surf))
  * ```
  */
-function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
+function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
   assertNotPromise(surf);
   const app = new Hono();
 
   const registry = surf.commands;
   const sessions = surf.sessions;
 
-  function extractAuth(c: any): string | undefined {
-    const auth = c.req.header('authorization') as string | undefined;
+  function extractAuth(c: HonoContext): string | undefined {
+    const auth = c.req.header('authorization');
     if (!auth) return undefined;
     return auth.startsWith('Bearer ') ? auth.slice(7) : auth;
   }
 
-  function extractIp(c: any): string | undefined {
-    const fwd = c.req.header('x-forwarded-for') as string | undefined;
+  function extractIp(c: HonoContext): string | undefined {
+    const fwd = c.req.header('x-forwarded-for');
     if (fwd) return fwd.split(',')[0]?.trim();
-    return c.req.header('x-real-ip') as string | undefined;
+    return c.req.header('x-real-ip');
   }
 
   function getErrorStatus(code: string): number {
@@ -69,13 +104,13 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
     '/surf/session/end',
   ];
   for (const route of optionsRoutes) {
-    app.options(route, (c: any) => {
+    app.options(route, (c: HonoContext) => {
       return c.body(null, 204, corsHeaders);
     });
   }
 
   // ─── GET /.well-known/surf.json ──────────────────────────────────────
-  app.get('/.well-known/surf.json', async (c: any) => {
+  app.get('/.well-known/surf.json', async (c: HonoContext) => {
     const token = extractAuth(c);
     const manifestData = await surf.manifestForToken(token);
     const etag = `"${manifestData.checksum}"`;
@@ -96,10 +131,10 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
   });
 
   // ─── POST /surf/execute ──────────────────────────────────────────────
-  app.post('/surf/execute', async (c: any) => {
+  app.post('/surf/execute', async (c: HonoContext) => {
     let body: ExecuteRequest;
     try {
-      body = await c.req.json();
+      body = await c.req.json() as ExecuteRequest;
     } catch {
       return c.json(
         { ok: false, error: { code: 'INVALID_PARAMS', message: 'Invalid JSON body' } },
@@ -206,10 +241,10 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
   });
 
   // ─── POST /surf/pipeline ─────────────────────────────────────────────
-  app.post('/surf/pipeline', async (c: any) => {
+  app.post('/surf/pipeline', async (c: HonoContext) => {
     let body: PipelineRequest;
     try {
-      body = await c.req.json();
+      body = await c.req.json() as PipelineRequest;
     } catch {
       return c.json(
         { ok: false, error: { code: 'INVALID_PARAMS', message: 'Invalid JSON body' } },
@@ -236,7 +271,7 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
   });
 
   // ─── POST /surf/session/start ────────────────────────────────────────
-  app.post('/surf/session/start', async (c: any) => {
+  app.post('/surf/session/start', async (c: HonoContext) => {
     const session = await sessions.create();
     return c.json({ ok: true, sessionId: session.id }, 200, {
       'Access-Control-Allow-Origin': '*',
@@ -244,8 +279,8 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
   });
 
   // ─── POST /surf/session/end ──────────────────────────────────────────
-  app.post('/surf/session/end', async (c: any) => {
-    const body = await c.req.json();
+  app.post('/surf/session/end', async (c: HonoContext) => {
+    const body = await c.req.json() as { sessionId?: string };
     if (body?.sessionId) {
       await sessions.destroy(body.sessionId);
     }
@@ -271,12 +306,12 @@ function buildHonoApp(surf: SurfInstance, Hono: new () => any): any {
  * app.route('/', await honoApp(surf))
  * ```
  */
-export async function honoApp(surf: SurfInstance): Promise<any> {
+export async function honoApp(surf: SurfInstance): Promise<HonoApp> {
   // Dynamic import to avoid compile-time dependency on hono (works in both ESM and CJS)
-  let Hono: new () => any;
+  let Hono: HonoConstructor;
   try {
-    const mod = await import('hono');
-    Hono = (mod as any).Hono;
+    const mod: HonoModule = await import('hono');
+    Hono = mod.Hono;
   } catch {
     throw new Error('@surfjs/core: Hono adapter requires the "hono" package. Install it: pnpm add hono');
   }
@@ -298,7 +333,7 @@ export async function honoApp(surf: SurfInstance): Promise<any> {
  * app.route('/', honoAppSync(surf, Hono))
  * ```
  */
-export function honoAppSync(surf: SurfInstance, HonoCtor: new () => any): any {
+export function honoAppSync(surf: SurfInstance, HonoCtor: HonoConstructor): HonoApp {
   return buildHonoApp(surf, HonoCtor);
 }
 
@@ -310,7 +345,7 @@ export function honoAppSync(surf: SurfInstance, HonoCtor: new () => any): any {
  * export default { fetch: honoMiddleware(surf) }
  * ```
  */
-export async function honoMiddleware(surf: SurfInstance): Promise<(request: Request, env?: unknown, ctx?: unknown) => Promise<Response>> {
+export async function honoMiddleware(surf: SurfInstance): Promise<(request: Request, env?: unknown, ctx?: unknown) => Response | Promise<Response>> {
   const app = await honoApp(surf);
   return (request: Request, env?: unknown, ctx?: unknown) => app.fetch(request, env, ctx);
 }
