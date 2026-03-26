@@ -244,7 +244,7 @@ export function SurfBadge({
             color: dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)',
             lineHeight: 1.2,
           }}>
-            {commands.length} command{commands.length !== 1 ? 's' : ''} · AI-native
+            AI agents can interact with this site
           </span>
         </div>
       </a>
