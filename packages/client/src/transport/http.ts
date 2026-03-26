@@ -19,7 +19,7 @@ const DEFAULT_EXECUTE_PATH = '/surf/execute';
  */
 export class HttpTransport {
   private readonly baseUrl: string;
-  private readonly auth?: string;
+  private auth?: string;
   private readonly fetch: typeof globalThis.fetch;
   private readonly executePath: string;
 
@@ -28,6 +28,11 @@ export class HttpTransport {
     this.auth = options.auth;
     this.fetch = options.fetch;
     this.executePath = options.basePath ?? DEFAULT_EXECUTE_PATH;
+  }
+
+  /** Update the auth token used for subsequent requests. */
+  setAuth(token: string | undefined): void {
+    this.auth = token;
   }
 
   async execute(
