@@ -162,10 +162,16 @@ export function SurfBadge({
 
   useEffect(() => {
     if (theme !== 'auto') { setDark(theme === 'dark'); return }
-    const check = () => setDark(
-      document.documentElement.classList.contains('dark') ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    )
+    const check = () => {
+      const el = document.documentElement
+      const hasExplicitDark = el.classList.contains('dark')
+      const hasExplicitLight = el.classList.contains('light')
+      if (hasExplicitDark || hasExplicitLight) {
+        setDark(hasExplicitDark)
+      } else {
+        setDark(window.matchMedia('(prefers-color-scheme: dark)').matches)
+      }
+    }
     check()
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     mq.addEventListener('change', check)
