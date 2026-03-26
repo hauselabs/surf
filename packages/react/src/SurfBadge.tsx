@@ -154,11 +154,22 @@ export function SurfBadge({
   theme = 'auto',
 }: SurfBadgeProps) {
   const [hue, setHue] = useState(0)
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(() => {
+    if (typeof document === 'undefined') return false
+    if (theme !== 'auto') return theme === 'dark'
+    const el = document.documentElement
+    if (el.classList.contains('dark') || el.classList.contains('light')) {
+      return el.classList.contains('dark')
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+  const [mounted, setMounted] = useState(false)
   const [hovered, setHovered] = useState(false)
   const rafRef = useRef(0)
   const microManifest = buildMicroManifest({ endpoint, name, description, commands })
   const cleanEndpoint = endpoint.replace(/^https?:\/\//, '')
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (theme !== 'auto') { setDark(theme === 'dark'); return }
@@ -217,6 +228,7 @@ export function SurfBadge({
         style={{
           ...posStyles[position],
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+          visibility: mounted ? 'visible' : 'hidden',
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
