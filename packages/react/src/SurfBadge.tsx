@@ -51,23 +51,39 @@ function buildMicroManifest(props: SurfBadgeProps): string {
 
 // ─── Seal SVG ─────────────────────────────────────────────────────────────────
 
-function Seal({ size, hue, dark }: { size: number; hue: number; dark: boolean }) {
+function Seal({ size, hue, dark, active }: { size: number; hue: number; dark: boolean; active: boolean }) {
   const r = size / 2
   const inner = r * 0.65
   const tickCount = 72
 
-  const strokeMain = dark
-    ? `hsla(${200 + hue * 0.15}, 40%, 70%, 0.55)`
-    : `hsla(${210 + hue * 0.15}, 35%, 40%, 0.4)`
-  const strokeAccent = dark
-    ? `hsla(${260 + hue * 0.1}, 35%, 65%, 0.35)`
-    : `hsla(${250 + hue * 0.1}, 30%, 50%, 0.25)`
-  const textColor = dark
-    ? `hsla(${200 + hue * 0.15}, 30%, 65%, 0.5)`
-    : `hsla(${210 + hue * 0.15}, 25%, 40%, 0.35)`
-  const waveColor = dark
-    ? `hsla(${200 + hue * 0.15}, 50%, 75%, 0.7)`
-    : `hsla(${210 + hue * 0.15}, 40%, 45%, 0.55)`
+  const strokeMain = active
+    ? dark
+      ? `hsla(${190 + hue * 0.3}, 80%, 70%, 0.85)`
+      : `hsla(${200 + hue * 0.3}, 70%, 45%, 0.8)`
+    : dark
+      ? `hsla(${200 + hue * 0.15}, 40%, 70%, 0.55)`
+      : `hsla(${210 + hue * 0.15}, 45%, 35%, 0.6)`
+  const strokeAccent = active
+    ? dark
+      ? `hsla(${260 + hue * 0.25}, 70%, 70%, 0.7)`
+      : `hsla(${250 + hue * 0.25}, 60%, 50%, 0.6)`
+    : dark
+      ? `hsla(${260 + hue * 0.1}, 35%, 65%, 0.35)`
+      : `hsla(${250 + hue * 0.1}, 40%, 45%, 0.4)`
+  const textColor = active
+    ? dark
+      ? `hsla(${200 + hue * 0.3}, 60%, 75%, 0.8)`
+      : `hsla(${210 + hue * 0.3}, 50%, 40%, 0.7)`
+    : dark
+      ? `hsla(${200 + hue * 0.15}, 30%, 65%, 0.5)`
+      : `hsla(${210 + hue * 0.15}, 30%, 35%, 0.45)`
+  const waveColor = active
+    ? dark
+      ? `hsla(${190 + hue * 0.3}, 85%, 75%, 0.95)`
+      : `hsla(${200 + hue * 0.3}, 75%, 45%, 0.85)`
+    : dark
+      ? `hsla(${200 + hue * 0.15}, 50%, 75%, 0.7)`
+      : `hsla(${210 + hue * 0.15}, 50%, 40%, 0.65)`
 
   const ticks = Array.from({ length: tickCount }, (_, i) => {
     const angle = (i / tickCount) * Math.PI * 2
@@ -287,7 +303,7 @@ export function SurfBadge({
             ? dark
               ? 'linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(123,97,255,0.07) 50%, rgba(255,107,157,0.05) 100%)'
               : 'linear-gradient(135deg, rgba(0,180,220,0.08) 0%, rgba(100,80,200,0.05) 50%, rgba(220,90,130,0.03) 100%)'
-            : dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+            : dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
           border: hovered
             ? `1px solid ${dark ? 'rgba(0,212,255,0.18)' : 'rgba(0,160,200,0.12)'}`
             : `1px solid ${dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
@@ -298,7 +314,7 @@ export function SurfBadge({
             : 'none',
           transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
           transform: hovered ? 'translateY(-2px) scale(1.04)' : 'scale(1)',
-          opacity: hovered ? 1 : 0.5,
+          opacity: hovered ? 1 : dark ? 0.5 : 0.7,
           userSelect: 'none' as const,
         }}
           role="status"
@@ -315,7 +331,7 @@ export function SurfBadge({
                 : 'drop-shadow(0 0 8px rgba(0,160,200,0.25)) brightness(1.1)'
               : 'none',
           }}>
-            <Seal size={sealSize} hue={hue} dark={dark} />
+            <Seal size={sealSize} hue={hue} dark={dark} active={hovered} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <span style={{
@@ -323,7 +339,7 @@ export function SurfBadge({
               transition: 'color 400ms ease',
               color: hovered
                 ? dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)'
-                : dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.28)',
+                : dark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.5)',
             }}>
               Surf-Enabled
             </span>
@@ -332,7 +348,7 @@ export function SurfBadge({
               transition: 'color 400ms ease',
               color: hovered
                 ? dark ? 'rgba(0,212,255,0.65)' : 'rgba(0,150,190,0.55)'
-                : dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.18)',
+                : dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.3)',
             }}>
               Open for AI agents
             </span>
