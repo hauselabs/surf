@@ -301,20 +301,20 @@ export function SurfBadge({
           padding: '5px 14px 5px 5px', borderRadius: sealSize, cursor: 'default',
           background: hovered
             ? dark
-              ? 'linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(123,97,255,0.07) 50%, rgba(255,107,157,0.05) 100%)'
-              : 'linear-gradient(135deg, rgba(0,180,220,0.08) 0%, rgba(100,80,200,0.05) 50%, rgba(220,90,130,0.03) 100%)'
-            : dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
+              ? 'linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(123,97,255,0.08) 50%, rgba(255,107,157,0.06) 100%)'
+              : 'linear-gradient(135deg, rgba(0,180,220,0.12) 0%, rgba(100,80,200,0.08) 50%, rgba(220,90,130,0.04) 100%)'
+            : dark ? 'rgba(255,255,255,0.03)' : 'rgba(240,243,248,0.95)',
           border: hovered
-            ? `1px solid ${dark ? 'rgba(0,212,255,0.18)' : 'rgba(0,160,200,0.12)'}`
-            : `1px solid ${dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}`,
+            ? `1px solid ${dark ? 'rgba(0,212,255,0.2)' : 'rgba(0,150,200,0.25)'}`
+            : `1px solid ${dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)'}`,
           boxShadow: hovered
             ? dark
-              ? '0 4px 24px rgba(0,212,255,0.12), 0 8px 40px rgba(123,97,255,0.08), inset 0 1px 0 rgba(255,255,255,0.06)'
-              : '0 4px 24px rgba(0,160,200,0.1), 0 8px 40px rgba(100,80,200,0.05), inset 0 1px 0 rgba(255,255,255,0.4)'
-            : 'none',
+              ? '0 4px 24px rgba(0,212,255,0.15), 0 8px 40px rgba(123,97,255,0.1), inset 0 1px 0 rgba(255,255,255,0.06)'
+              : '0 4px 24px rgba(0,150,200,0.15), 0 8px 40px rgba(100,80,200,0.08), 0 0 0 1px rgba(0,150,200,0.1)'
+            : dark ? 'none' : '0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03)',
           transition: 'all 500ms cubic-bezier(0.16, 1, 0.3, 1)',
           transform: hovered ? 'translateY(-2px) scale(1.04)' : 'scale(1)',
-          opacity: hovered ? 1 : dark ? 0.5 : 0.7,
+          opacity: hovered ? 1 : dark ? 0.55 : 1,
           userSelect: 'none' as const,
         }}
           role="status"
