@@ -1,9 +1,9 @@
-import type { ZodObject, ZodTypeAny } from 'zod';
 import type { MiddlewareContext, SurfMiddleware } from '@surfjs/core';
 
 /**
  * Create a Surf middleware that validates command params against a Zod schema.
- * Use this for runtime validation in addition to (or instead of) Surf's built-in validation.
+ * Uses duck-typing to avoid importing concrete Zod types, ensuring compatibility
+ * with both Zod 3 and Zod 4.
  *
  * @param schema - A `z.object({...})` schema to validate incoming params against
  * @returns A SurfMiddleware function
@@ -23,13 +23,13 @@ import type { MiddlewareContext, SurfMiddleware } from '@surfjs/core';
  * ```
  */
 export function zodValidator(
-  schema: ZodObject<Record<string, ZodTypeAny>>,
+  schema: unknown,
 ): SurfMiddleware {
   return async (ctx: MiddlewareContext, next: () => Promise<void>) => {
-    const parseResult = schema.safeParse(ctx.params);
+    const parseResult = (schema as { safeParse(data: unknown): { success: boolean; error?: { issues: Array<{ path: Array<string | number>; message: string; code: string }> }; data?: unknown } }).safeParse(ctx.params);
 
     if (!parseResult.success) {
-      const issues = parseResult.error.issues;
+      const issues = parseResult.error!.issues;
       const message = issues
         .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
         .join('; ');
