@@ -43,15 +43,13 @@ const PSYCH_CSS = `
     filter: drop-shadow(0 0 10px rgba(123,97,255,0.5)) drop-shadow(0 0 24px rgba(255,0,128,0.3)) saturate(2.5) brightness(1.3);
   }
 }
-@keyframes surfCardGlow {
-  0%, 100% { box-shadow: 0 0 30px rgba(255,0,128,0.25), 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(123,97,255,0.15); }
-  33% { box-shadow: 0 0 30px rgba(0,212,255,0.25), 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(255,107,0,0.15); }
-  66% { box-shadow: 0 0 30px rgba(123,97,255,0.25), 0 20px 60px rgba(0,0,0,0.4), 0 0 80px rgba(0,212,255,0.15); }
+@keyframes surfCardBreathe {
+  0%, 100% { box-shadow: 0 0 40px rgba(0,212,255,0.12), 0 20px 60px rgba(0,0,0,0.3); }
+  50% { box-shadow: 0 0 50px rgba(123,97,255,0.15), 0 20px 60px rgba(0,0,0,0.3); }
 }
-@keyframes surfCardGlowLight {
-  0%, 100% { box-shadow: 0 0 20px rgba(255,0,128,0.1), 0 20px 60px rgba(0,0,0,0.06), 0 0 60px rgba(123,97,255,0.08); }
-  33% { box-shadow: 0 0 20px rgba(0,180,220,0.1), 0 20px 60px rgba(0,0,0,0.06), 0 0 60px rgba(255,107,0,0.08); }
-  66% { box-shadow: 0 0 20px rgba(123,97,255,0.1), 0 20px 60px rgba(0,0,0,0.06), 0 0 60px rgba(0,180,220,0.08); }
+@keyframes surfCardBreatheLight {
+  0%, 100% { box-shadow: 0 0 30px rgba(0,180,220,0.08), 0 20px 50px rgba(0,0,0,0.06); }
+  50% { box-shadow: 0 0 35px rgba(123,97,255,0.08), 0 20px 50px rgba(0,0,0,0.06); }
 }
 @keyframes surfShimmer {
   0% { background-position: -200% center; }
@@ -59,11 +57,21 @@ const PSYCH_CSS = `
 }
 @keyframes surfPillFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2px); }
+  50% { transform: translateY(-1px); }
 }
 @keyframes surfBadgePulse {
   0%, 100% { transform: scale(1.06); }
   50% { transform: scale(1.12); }
+}
+@keyframes surfBorderShift {
+  0%, 100% { border-color: rgba(0,212,255,0.25); }
+  33% { border-color: rgba(123,97,255,0.25); }
+  66% { border-color: rgba(200,80,180,0.2); }
+}
+@keyframes surfBorderShiftLight {
+  0%, 100% { border-color: rgba(0,180,220,0.2); }
+  33% { border-color: rgba(123,97,255,0.18); }
+  66% { border-color: rgba(180,70,160,0.15); }
 }
 `
 
@@ -340,43 +348,41 @@ export function SurfBadge({
             ? 'all 500ms cubic-bezier(0.34, 1.56, 0.64, 1)'
             : 'all 350ms cubic-bezier(0.16, 1, 0.3, 1)',
           pointerEvents: showPanel ? 'auto' : 'none',
-          background: psychedelic
-            ? `conic-gradient(from ${displayHue}deg, #ff0080, #ff8c00, #ffef00, #40e0d0, #7b61ff, #ff0080)`
-            : 'transparent',
-          padding: psychedelic ? 2 : 0,
           borderRadius: 16,
+          background: psychedelic
+            ? dark
+              ? `radial-gradient(ellipse at 30% 0%, hsla(${displayHue + 200}, 50%, 30%, 0.12), transparent 60%), radial-gradient(ellipse at 70% 100%, hsla(${displayHue}, 45%, 25%, 0.1), transparent 60%), rgba(12, 10, 22, 0.35)`
+              : `radial-gradient(ellipse at 30% 0%, hsla(${displayHue + 200}, 40%, 85%, 0.15), transparent 60%), radial-gradient(ellipse at 70% 100%, hsla(${displayHue}, 35%, 88%, 0.12), transparent 60%), rgba(255, 255, 255, 0.25)`
+            : dark ? 'rgba(12,12,16,0.94)' : 'rgba(255,255,255,0.96)',
+          backdropFilter: psychedelic ? 'blur(40px) saturate(1.4)' : 'blur(24px)',
+          WebkitBackdropFilter: psychedelic ? 'blur(40px) saturate(1.4)' : 'blur(24px)',
+          border: psychedelic
+            ? `1px solid ${dark ? 'rgba(0,212,255,0.2)' : 'rgba(0,180,220,0.15)'}`
+            : `1px solid ${dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+          boxShadow: psychedelic
+            ? undefined
+            : dark
+              ? '0 20px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03)'
+              : '0 20px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
           animation: psychedelic
-            ? dark ? 'surfCardGlow 3s ease-in-out infinite' : 'surfCardGlowLight 3s ease-in-out infinite'
+            ? dark
+              ? 'surfCardBreathe 4s ease-in-out infinite, surfBorderShift 6s ease-in-out infinite'
+              : 'surfCardBreatheLight 4s ease-in-out infinite, surfBorderShiftLight 6s ease-in-out infinite'
             : 'none',
+          padding: '16px 18px',
         }}>
-          <div style={{
-            background: psychedelic
-              ? dark
-                ? `radial-gradient(ellipse at 25% 15%, hsla(${displayHue + 180}, 60%, 18%, 0.5), transparent 55%), radial-gradient(ellipse at 75% 85%, hsla(${displayHue}, 70%, 22%, 0.4), transparent 55%), rgba(8, 5, 18, 0.97)`
-                : `radial-gradient(ellipse at 25% 15%, hsla(${displayHue + 180}, 45%, 88%, 0.5), transparent 55%), radial-gradient(ellipse at 75% 85%, hsla(${displayHue}, 50%, 90%, 0.4), transparent 55%), rgba(255, 252, 255, 0.97)`
-              : dark ? 'rgba(12,12,16,0.94)' : 'rgba(255,255,255,0.96)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderRadius: 14,
-            border: psychedelic
-              ? 'none'
-              : `1px solid ${dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
-            boxShadow: psychedelic
-              ? 'none'
-              : dark
-                ? '0 20px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03)'
-                : '0 20px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
-            padding: '16px 18px',
-          }}>
+            {/* Title */}
             <div style={{
               fontSize: psychedelic ? 14 : 13,
               fontWeight: psychedelic ? 800 : 700,
               marginBottom: 6,
               lineHeight: 1.3,
               ...(psychedelic ? {
-                background: 'linear-gradient(90deg, #ff0080, #ff8c00, #40e0d0, #7b61ff, #ff0080)',
+                background: dark
+                  ? 'linear-gradient(90deg, rgba(0,212,255,0.9), rgba(160,120,255,0.85), rgba(0,212,255,0.9))'
+                  : 'linear-gradient(90deg, rgba(0,160,200,0.85), rgba(120,80,220,0.8), rgba(0,160,200,0.85))',
                 backgroundSize: '200% auto',
-                animation: 'surfShimmer 3s linear infinite',
+                animation: 'surfShimmer 4s linear infinite',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -384,9 +390,10 @@ export function SurfBadge({
                 color: dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)',
               }),
             }}>
-              {psychedelic ? '✦ This site speaks Surf ✦' : 'This site speaks Surf'}
+              {psychedelic ? '✦ This site speaks Surf' : 'This site speaks Surf'}
             </div>
 
+            {/* Description */}
             <div style={{
               fontSize: 11, lineHeight: 1.5,
               marginBottom: commands.length ? 14 : 0,
@@ -397,6 +404,7 @@ export function SurfBadge({
               AI agents can read and interact with this site through structured commands — no scraping needed.
             </div>
 
+            {/* Command pills */}
             {commands.length > 0 && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{
@@ -410,27 +418,27 @@ export function SurfBadge({
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 4 }}>
                   {commands.slice(0, 6).map((cmd, i) => {
-                    const pillHue = (displayHue + i * 55) % 360
+                    const pillHue = psychedelic ? (195 + (displayHue * 0.15) + i * 12) % 360 : 0
                     return (
                       <span key={cmd.name} style={{
                         fontSize: 10, padding: '3px 8px', borderRadius: 6,
                         background: psychedelic
                           ? dark
-                            ? `hsla(${pillHue}, 65%, 22%, 0.6)`
-                            : `hsla(${pillHue}, 55%, 92%, 0.8)`
+                            ? `hsla(${pillHue}, 40%, 20%, 0.35)`
+                            : `hsla(${pillHue}, 30%, 92%, 0.5)`
                           : dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
                         color: psychedelic
                           ? dark
-                            ? `hsla(${pillHue}, 80%, 75%, 0.9)`
-                            : `hsla(${pillHue}, 65%, 35%, 0.9)`
+                            ? `hsla(${pillHue}, 55%, 72%, 0.85)`
+                            : `hsla(${pillHue}, 45%, 38%, 0.8)`
                           : dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
                         border: `1px solid ${psychedelic
                           ? dark
-                            ? `hsla(${pillHue}, 60%, 45%, 0.35)`
-                            : `hsla(${pillHue}, 45%, 65%, 0.35)`
+                            ? `hsla(${pillHue}, 40%, 45%, 0.2)`
+                            : `hsla(${pillHue}, 30%, 60%, 0.2)`
                           : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-                        animation: psychedelic ? `surfPillFloat 2.5s ease-in-out ${i * 0.18}s infinite` : 'none',
-                        transition: 'all 400ms ease',
+                        animation: psychedelic ? `surfPillFloat 3s ease-in-out ${i * 0.25}s infinite` : 'none',
+                        transition: 'all 500ms ease',
                       }}>
                         {cmd.description || cmd.name}
                       </span>
@@ -450,6 +458,7 @@ export function SurfBadge({
               </div>
             )}
 
+            {/* Footer */}
             <div style={{
               paddingTop: 12,
               borderTop: `1px solid ${psychedelic
@@ -460,12 +469,10 @@ export function SurfBadge({
               <span style={{
                 fontSize: 9,
                 ...(psychedelic ? {
-                  background: 'linear-gradient(90deg, #7b61ff, #40e0d0)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  color: dark ? 'rgba(0,212,255,0.4)' : 'rgba(0,160,200,0.35)',
                   fontWeight: 600,
-                } as React.CSSProperties : {
+                  letterSpacing: '0.05em',
+                } : {
                   color: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)',
                 }),
               }}>
@@ -485,7 +492,6 @@ export function SurfBadge({
                 Learn more →
               </a>
             </div>
-          </div>
         </div>
 
         {/* ─── The Badge ───────────────────────────────────────── */}
