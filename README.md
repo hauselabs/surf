@@ -4,11 +4,17 @@
 
 **Give AI agents a CLI to your website.**
 
+[![CI](https://github.com/hauselabs/surf/actions/workflows/ci.yml/badge.svg)](https://github.com/hauselabs/surf/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@surfjs/core.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Docs](https://img.shields.io/badge/docs-surf.codes-0057FF?style=flat-square&logo=googledocs&logoColor=white)](https://surf.codes/docs)
 
 [Website](https://surf.codes) · [Docs](https://surf.codes/docs) · [Protocol Spec](./SPEC.md) · [Examples](./examples) · [Contributing](./CONTRIBUTING.md)
+
+<br/>
+
+[![Surf-enabled](https://surf.codes/badge.svg)](https://surf.codes/badge)
 
 </div>
 
