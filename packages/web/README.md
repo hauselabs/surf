@@ -56,8 +56,8 @@ If no local handler is registered, `window.surf.execute()` falls back to the ser
 `@surfjs/web` is the engine. Framework packages are thin wrappers:
 
 - **React:** `@surfjs/react` — `useSurfCommands()` hook
-- **Vue:** `@surfjs/vue` *(coming soon)*
-- **Svelte:** `@surfjs/svelte` *(coming soon)*
+- **Vue:** `@surfjs/vue` — `useSurfCommands()` composable
+- **Svelte:** `@surfjs/svelte` — `surfCommands()` function
 
 ## API
 
