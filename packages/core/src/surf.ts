@@ -4,6 +4,7 @@ import type {
   HttpHandler,
   SessionStore,
 } from './types.js';
+import type { WebSocketServer as WsServerConstructor } from 'ws';
 import type { SurfMiddleware } from './middleware.js';
 import { CommandRegistry } from './commands.js';
 import { generateManifest } from './manifest.js';
@@ -62,12 +63,14 @@ export interface SurfInstance {
 }
 
 export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
-  // Eagerly try to load ws for WebSocket support (works in both CJS and ESM)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let WsServer: any;
+  // Eagerly try to load ws for WebSocket support (works in both CJS and ESM).
+  // ws is an optional peer dependency — typed via devDependency @types/ws.
+  let WsServer: typeof WsServerConstructor | undefined;
   try {
-    const ws = await import('ws') as any;
-    WsServer = ws.WebSocketServer ?? ws.default?.WebSocketServer;
+    // Dynamic import with CJS/ESM interop: named export first, default fallback
+    type WsModule = typeof import('ws') & { default?: typeof import('ws') };
+    const wsModule = await import('ws') as WsModule;
+    WsServer = wsModule.WebSocketServer ?? wsModule.default?.WebSocketServer;
   } catch {
     // ws not installed — wsHandler() will throw a clear error if called
   }
@@ -175,10 +178,13 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
           '@surfjs/core: WebSocket transport requires the "ws" package. Install it: pnpm add ws',
         );
       }
+      // Capture in a const so TypeScript's control-flow narrowing applies
+      // inside this closure (let-variable narrowing doesn't cross function boundaries).
+      const WsSrv = WsServer;
       const maxPayload = config.live?.maxPayloadBytes ?? 1_048_576; // 1MB default
       const allowedOrigins = config.live?.allowedOrigins;
 
-      const wss = new WsServer({
+      const wss = new WsSrv({
         server: server as never,
         maxPayload,
         verifyClient: (info: { origin: string; req: unknown }, cb: (result: boolean, code?: number, message?: string) => void) => {
