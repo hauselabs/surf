@@ -14,7 +14,7 @@
 
 Surf is an **open protocol** that lets websites expose structured commands for AI agents — like a CLI for the web. Instead of scraping HTML or wrestling with vision models, agents discover a typed manifest at `/.well-known/surf.json` and execute commands directly.
 
-**`@surfjs/core`** is the server-side library. Define commands with typed parameters, mount middleware, and let any framework serve them.
+**`@surfjs/core`** is the server-side library for the Surf protocol. Define commands with typed parameters, mount middleware, and let any framework serve them.
 
 ### Why Surf?
 
@@ -30,6 +30,8 @@ Surf is an **open protocol** that lets websites expose structured commands for A
 | Package | Description |
 |---------|-------------|
 | **@surfjs/core** | Server-side command registry & middleware |
+| [@surfjs/web](https://www.npmjs.com/package/@surfjs/web) | Browser runtime — `window.surf` local execution |
+| [@surfjs/react](https://www.npmjs.com/package/@surfjs/react) | React hooks — `useSurfCommands`, `SurfProvider`, `SurfBadge` |
 | [@surfjs/client](https://www.npmjs.com/package/@surfjs/client) | Agent-side SDK for discovering and executing commands |
 | [@surfjs/cli](https://www.npmjs.com/package/@surfjs/cli) | CLI to inspect, test, and ping Surf endpoints |
 | [@surfjs/devui](https://www.npmjs.com/package/@surfjs/devui) | Interactive dev inspector |
@@ -179,8 +181,21 @@ interface CommandHints {
   idempotent?: boolean;    // Safe to retry (same params → same result)
   sideEffects?: boolean;   // Whether the command modifies state
   estimatedMs?: number;    // Expected execution time
+  execution?: 'any' | 'browser' | 'server';  // Where the command runs
 }
 ```
+
+#### Execution hints
+
+The `execution` hint tells agents (and the `@surfjs/web` runtime) where a command should run:
+
+```typescript
+hints: { execution: 'browser' }  // Runs locally in browser via window.surf. No server call.
+hints: { execution: 'server' }   // Runs on the server only. Always goes through HTTP/WS.
+hints: { execution: 'any' }      // Works everywhere (default). Runtime picks the fastest path.
+```
+
+Commands with `execution: 'browser'` are handled by `@surfjs/web` local handlers registered via `useSurfCommands`. If no local handler is found, execution falls back to the server.
 
 ### ExecutionContext
 

@@ -56,6 +56,53 @@ app.listen(3000);
 
 That's it. Your site is now agent-navigable.
 
+## Browser-Side Execution
+
+Commands don't have to go through a server. With `@surfjs/web` and `useSurfCommands`, handlers run **locally in the browser** — modifying UI state directly. Instant. No HTTP roundtrip.
+
+```tsx
+import { useSurfCommands } from '@surfjs/react'
+
+function MyApp() {
+  useSurfCommands({
+    'canvas.addCircle': {
+      mode: 'local',
+      run: (params) => {
+        addCircleToCanvas(params)
+        return { ok: true }
+      }
+    },
+    'sidebar.toggle': {
+      mode: 'local',
+      run: ({ open }) => {
+        setSidebarOpen(open)
+        return { ok: true }
+      }
+    }
+  })
+}
+
+// Agent runs: await window.surf.execute('canvas.addCircle', { x: 200, radius: 50 })
+```
+
+Handlers are registered on mount, cleaned up on unmount. The `window.surf` dispatcher routes to the local handler first — falling back to the server if no handler is found.
+
+## Execution Modes
+
+| Mode | Where it runs | Use case |
+|------|--------------|----------|
+| `'local'` | Browser only | UI state changes — no persistence needed |
+| `'sync'` | Browser first, then server | Optimistic UI with server persistence |
+| *(fallback)* | Server | Commands with no registered local handler |
+
+Set an execution hint on the command definition to signal intent:
+
+```typescript
+hints: { execution: 'browser' }  // Always handled locally
+hints: { execution: 'server' }   // Always goes to server
+hints: { execution: 'any' }      // Runtime picks (default)
+```
+
 ## How It Works
 
 ### 1. Define commands
@@ -132,13 +179,14 @@ const results = await client.execute('search', { query: 'blue shoes', maxPrice: 
 
 | Package | Description | |
 |---|---|---|
-| [`@surfjs/core`](./packages/core) | Server-side library — define commands, generate manifest, handle transports | [![npm](https://img.shields.io/npm/v/@surfjs/core.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/core) |
-| [`@surfjs/client`](./packages/client) | Agent-side SDK — discover, execute, pipeline, sessions, WebSocket, typed client | [![npm](https://img.shields.io/npm/v/@surfjs/client.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/client) |
-| [`@surfjs/cli`](./packages/cli) | Terminal tool — inspect, test, and ping Surf-enabled sites | [![npm](https://img.shields.io/npm/v/@surfjs/cli.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/cli) |
-| [`@surfjs/devui`](./packages/devui) | Interactive browser-based dev inspector for Surf commands | [![npm](https://img.shields.io/npm/v/@surfjs/devui.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/devui) |
+| [`@surfjs/core`](./packages/core) | Server-side: commands, manifest, auth, sessions, transports | [![npm](https://img.shields.io/npm/v/@surfjs/core.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/core) |
+| [`@surfjs/web`](./packages/web) | Browser runtime: `window.surf`, local command handlers | [![npm](https://img.shields.io/npm/v/@surfjs/web.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/web) |
+| [`@surfjs/react`](./packages/react) | React hooks: `useSurfCommands`, `SurfProvider`, `SurfBadge` | [![npm](https://img.shields.io/npm/v/@surfjs/react.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/react) |
+| [`@surfjs/client`](./packages/client) | Headless SDK for programmatic access — discover, execute, pipeline, sessions | [![npm](https://img.shields.io/npm/v/@surfjs/client.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/client) |
+| [`@surfjs/cli`](./packages/cli) | Developer tool: inspect, test, and ping Surf-enabled sites | [![npm](https://img.shields.io/npm/v/@surfjs/cli.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/cli) |
 | [`@surfjs/next`](./packages/next) | Next.js App Router & Pages Router adapter | [![npm](https://img.shields.io/npm/v/@surfjs/next.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/next) |
+| [`@surfjs/devui`](./packages/devui) | Browser DevUI overlay for inspecting Surf commands | [![npm](https://img.shields.io/npm/v/@surfjs/devui.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/devui) |
 | [`@surfjs/zod`](./packages/zod) | Zod schema integration for typed command params | [![npm](https://img.shields.io/npm/v/@surfjs/zod.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/zod) |
-| [`@surfjs/react`](./packages/react) | React hooks for Surf Live — real-time state sync via WebSocket | [![npm](https://img.shields.io/npm/v/@surfjs/react.svg?style=flat-square)](https://www.npmjs.com/package/@surfjs/react) |
 
 ---
 
