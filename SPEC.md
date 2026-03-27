@@ -310,6 +310,10 @@ The manifest `checksum` changes depending on which commands are included, ensuri
 
 ## 5. Error Codes
 
+### 5.1 Server Error Codes
+
+These codes are returned by the server in `ErrorResponse.error.code` and map to HTTP status codes.
+
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
 | `UNKNOWN_COMMAND` | 404 | Command not found in manifest |
@@ -318,9 +322,48 @@ The manifest `checksum` changes depending on which commands are included, ensuri
 | `AUTH_REQUIRED` | 401 | Auth required but not provided |
 | `AUTH_FAILED` | 403 | Auth token invalid or insufficient scope |
 | `SESSION_EXPIRED` | 410 | Session no longer valid |
-| `RATE_LIMITED` | 429 | Rate limit exceeded |
+| `RATE_LIMITED` | 429 | Rate limit exceeded — check `Retry-After` header |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |
-| `NOT_SUPPORTED` | 501 | Feature not available |
+| `NOT_SUPPORTED` | 501 | Feature or transport not available |
+
+### 5.2 Client Error Codes
+
+These codes are thrown by the client SDK (`SurfClientError.code`) for transport and protocol-level failures that occur before or after a server response. Server codes (`§5.1`) may also appear when the server error is passed through directly.
+
+| Code | Description |
+|------|-------------|
+| `NETWORK_ERROR` | Network-level failure — WebSocket closed, HTTP error, or fetch failed |
+| `TIMEOUT` | Request or discovery timed out |
+| `NOT_CONNECTED` | Transport not connected — call `connect()` first |
+| `INVALID_MANIFEST` | Manifest response was invalid or missing required fields (`surf`, `commands`) |
+| `MAX_RETRIES` | All retry attempts exhausted without a successful response |
+| `HTTP_ERROR` | Non-OK HTTP response from a raw HTTP request (e.g. pipeline endpoint) |
+
+**Handling client errors:**
+```ts
+import { SurfClientError } from '@surfjs/client';
+
+try {
+  await client.execute('search', { query: 'shoes' });
+} catch (e) {
+  if (e instanceof SurfClientError) {
+    switch (e.code) {
+      case 'RATE_LIMITED':
+        console.log(`Retry in ${e.retryAfter}s`);
+        break;
+      case 'NOT_CONNECTED':
+        await client.connect();
+        break;
+      case 'TIMEOUT':
+        console.error('Request timed out');
+        break;
+      case 'NETWORK_ERROR':
+        console.error('Network failure:', e.message);
+        break;
+    }
+  }
+}
+```
 
 ---
 

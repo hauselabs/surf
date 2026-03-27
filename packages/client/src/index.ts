@@ -21,6 +21,7 @@ export type {
   EventDefinition,
   TypeDefinition,
   SurfErrorCode,
+  SurfClientErrorCode,
   ExecuteResponse,
   ErrorResponse,
   SurfResponse,

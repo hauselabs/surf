@@ -1,5 +1,6 @@
 import type { SurfManifest, SurfResponse, SurfErrorCode } from '../types.js';
 import { isSurfErrorCode } from '../types.js';
+import { SurfClientError } from '../client.js';
 
 type EventCallback = (data: unknown) => void;
 
@@ -28,7 +29,10 @@ export class WindowTransport {
    */
   async connect(): Promise<void> {
     if (typeof window === 'undefined') {
-      throw new Error('WindowTransport only works in browser environments');
+      throw new SurfClientError(
+        'WindowTransport only works in browser environments',
+        'NOT_SUPPORTED',
+      );
     }
 
     if (window.__surf__) {
@@ -39,7 +43,10 @@ export class WindowTransport {
     // Wait for surf:ready event
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(new Error('Timeout waiting for window.__surf__'));
+        reject(new SurfClientError(
+          'Timeout waiting for window.__surf__ (5s). Ensure the Surf browser script is loaded.',
+          'TIMEOUT',
+        ));
       }, 5000);
 
       window.addEventListener('surf:ready', () => {
@@ -48,7 +55,10 @@ export class WindowTransport {
           this.surf = window.__surf__;
           resolve();
         } else {
-          reject(new Error('surf:ready fired but window.__surf__ not found'));
+          reject(new SurfClientError(
+            'surf:ready event fired but window.__surf__ is not set',
+            'NETWORK_ERROR',
+          ));
         }
       }, { once: true });
     });
@@ -58,7 +68,7 @@ export class WindowTransport {
    * Get the manifest from the in-page runtime.
    */
   discover(): SurfManifest {
-    if (!this.surf) throw new Error('Not connected');
+    if (!this.surf) throw new SurfClientError('WindowTransport not connected — call connect() first', 'NOT_CONNECTED');
     return this.surf.discover();
   }
 
@@ -66,7 +76,7 @@ export class WindowTransport {
    * Execute a command via the in-page runtime.
    */
   async execute(command: string, params?: Record<string, unknown>): Promise<SurfResponse> {
-    if (!this.surf) throw new Error('Not connected');
+    if (!this.surf) throw new SurfClientError('WindowTransport not connected — call connect() first', 'NOT_CONNECTED');
 
     try {
       const result = await this.surf.execute(command, params);
@@ -98,7 +108,7 @@ export class WindowTransport {
    * Subscribe to events from the in-page runtime.
    */
   on(event: string, callback: EventCallback): () => void {
-    if (!this.surf) throw new Error('Not connected');
+    if (!this.surf) throw new SurfClientError('WindowTransport not connected — call connect() first', 'NOT_CONNECTED');
     return this.surf.subscribe(event, callback);
   }
 
@@ -106,7 +116,7 @@ export class WindowTransport {
    * Authenticate with the in-page runtime.
    */
   authenticate(token: string): void {
-    if (!this.surf) throw new Error('Not connected');
+    if (!this.surf) throw new SurfClientError('WindowTransport not connected — call connect() first', 'NOT_CONNECTED');
     this.surf.authenticate(token);
   }
 

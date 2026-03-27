@@ -1,4 +1,5 @@
 import type { SurfResponse } from '../types.js';
+import { SurfClientError } from '../client.js';
 
 export interface HttpTransportOptions {
   baseUrl: string;
@@ -84,9 +85,12 @@ export class HttpTransport {
       body: JSON.stringify({}),
     });
 
-    const data = (await response.json()) as { ok: boolean; sessionId?: string };
+    const data = (await response.json()) as { ok: boolean; sessionId?: string; error?: { code: string; message: string } };
     if (!data.ok || !data.sessionId) {
-      throw new Error('Failed to start session');
+      const errCode = data.error?.code;
+      const errMsg = data.error?.message ?? 'Failed to start session';
+      // If the server returned a Surf error code, pass it through; otherwise use NETWORK_ERROR
+      throw new SurfClientError(errMsg, errCode === 'SESSION_EXPIRED' ? 'SESSION_EXPIRED' : 'NETWORK_ERROR', response.status);
     }
     return data.sessionId;
   }

@@ -10,6 +10,7 @@ import type {
   TypedClient,
   PipelineStep,
   PipelineResponse,
+  SurfClientErrorCode,
 } from './types.js';
 import { discoverManifest } from './discovery.js';
 import { HttpTransport } from './transport/http.js';
@@ -17,12 +18,28 @@ import { WebSocketTransport } from './transport/websocket.js';
 
 // ─── SurfClientError ─────────────────────────────────────────────────────────
 
+/**
+ * Error thrown by the SurfClient SDK for transport, connection, and protocol failures.
+ * The `code` property carries a machine-readable `SurfClientErrorCode` for programmatic handling.
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await client.execute('search', { query: 'shoes' });
+ * } catch (e) {
+ *   if (e instanceof SurfClientError) {
+ *     if (e.code === 'RATE_LIMITED') console.log(`Retry in ${e.retryAfter}s`);
+ *     if (e.code === 'NOT_CONNECTED') await client.connect();
+ *   }
+ * }
+ * ```
+ */
 export class SurfClientError extends Error {
-  readonly code: string;
+  readonly code: SurfClientErrorCode;
   readonly statusCode?: number;
   readonly retryAfter?: number;
 
-  constructor(message: string, code: string, statusCode?: number, retryAfter?: number) {
+  constructor(message: string, code: SurfClientErrorCode, statusCode?: number, retryAfter?: number) {
     super(message);
     this.name = 'SurfClientError';
     this.code = code;

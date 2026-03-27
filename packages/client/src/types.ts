@@ -72,8 +72,13 @@ export interface UpdateCheckResult {
 
 // ─── Response Types ─────────────────────────────────────────────────────────
 
+/**
+ * Server-side error codes returned in Surf error responses.
+ * These correspond to HTTP status codes and appear in `ErrorResponse.error.code`.
+ */
 export type SurfErrorCode =
   | 'UNKNOWN_COMMAND'
+  | 'NOT_FOUND'
   | 'INVALID_PARAMS'
   | 'AUTH_REQUIRED'
   | 'AUTH_FAILED'
@@ -85,6 +90,7 @@ export type SurfErrorCode =
 /** Exhaustive list of valid SurfErrorCode values. */
 export const SURF_ERROR_CODES: readonly SurfErrorCode[] = [
   'UNKNOWN_COMMAND',
+  'NOT_FOUND',
   'INVALID_PARAMS',
   'AUTH_REQUIRED',
   'AUTH_FAILED',
@@ -98,6 +104,29 @@ export const SURF_ERROR_CODES: readonly SurfErrorCode[] = [
 export function isSurfErrorCode(code: string): code is SurfErrorCode {
   return (SURF_ERROR_CODES as readonly string[]).includes(code);
 }
+
+/**
+ * Client-side error codes thrown by the SurfClient SDK.
+ * These represent transport, connection, and protocol-level failures
+ * that occur before or after a server response.
+ *
+ * | Code | Meaning |
+ * |------|---------|
+ * | `NETWORK_ERROR` | Network-level failure (WebSocket closed, HTTP error, fetch failed) |
+ * | `TIMEOUT` | Request or discovery timed out |
+ * | `NOT_CONNECTED` | Transport not connected — call connect() first |
+ * | `INVALID_MANIFEST` | Manifest response was invalid or missing required fields |
+ * | `MAX_RETRIES` | All retry attempts exhausted |
+ * | `HTTP_ERROR` | Non-OK HTTP response from a raw HTTP request (e.g. pipeline) |
+ */
+export type SurfClientErrorCode =
+  | SurfErrorCode
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'NOT_CONNECTED'
+  | 'INVALID_MANIFEST'
+  | 'MAX_RETRIES'
+  | 'HTTP_ERROR';
 
 export interface ExecuteResponse {
   ok: true;

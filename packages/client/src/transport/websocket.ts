@@ -1,4 +1,5 @@
 import type { WsIncomingMessage, WsResultMessage, WsEventMessage, SurfResponse } from '../types.js';
+import { SurfClientError } from '../client.js';
 
 /** Type guard: verify that an unknown value has a `sessionId` string property. */
 function isSessionResult(value: unknown): value is { sessionId: string } {
@@ -119,7 +120,10 @@ export class WebSocketTransport {
 
       if (!WsConstructor) {
         this.setState('disconnected');
-        reject(new Error('WebSocket not available. Install "ws" package for Node.js.'));
+        reject(new SurfClientError(
+          'WebSocket not available. Install "ws" package for Node.js.',
+          'NOT_SUPPORTED',
+        ));
         return;
       }
 
@@ -163,7 +167,10 @@ export class WebSocketTransport {
         // Only reject if this is the initial connection attempt
         if (this._state === 'connecting') {
           this.setState('disconnected');
-          reject(new Error(`WebSocket error: ${String(ev)}`));
+          reject(new SurfClientError(
+            `WebSocket connection failed: ${String(ev)}`,
+            'NETWORK_ERROR',
+          ));
         }
       };
 
@@ -172,7 +179,7 @@ export class WebSocketTransport {
 
         // Reject all pending requests
         for (const [, pending] of this.pending) {
-          pending.reject(new Error('WebSocket closed'));
+          pending.reject(new SurfClientError('WebSocket connection closed', 'NETWORK_ERROR'));
         }
         this.pending.clear();
         this.ws = null;
@@ -251,7 +258,10 @@ export class WebSocketTransport {
     params?: Record<string, unknown>,
   ): Promise<SurfResponse> {
     if (!this.ws || this.ws.readyState !== WS_OPEN) {
-      return Promise.reject(new Error('WebSocket not connected'));
+      return Promise.reject(new SurfClientError(
+        'WebSocket not connected — call connect() first',
+        'NOT_CONNECTED',
+      ));
     }
 
     const id = `msg_${++this.msgCounter}`;
@@ -286,7 +296,10 @@ export class WebSocketTransport {
    */
   async startSession(): Promise<string> {
     if (!this.ws || this.ws.readyState !== WS_OPEN) {
-      throw new Error('WebSocket not connected');
+      throw new SurfClientError(
+        'WebSocket not connected — call connect() first',
+        'NOT_CONNECTED',
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -296,8 +309,16 @@ export class WebSocketTransport {
           if (response.ok && isSessionResult(response.result)) {
             this.sessionId = response.result.sessionId;
             resolve(response.result.sessionId);
+          } else if (!response.ok) {
+            reject(new SurfClientError(
+              response.error?.message ?? 'Failed to start session',
+              response.error?.code ?? 'NETWORK_ERROR',
+            ));
           } else {
-            reject(new Error('Failed to start session: unexpected response shape'));
+            reject(new SurfClientError(
+              'Failed to start session: unexpected response shape',
+              'NETWORK_ERROR',
+            ));
           }
         },
         reject,
