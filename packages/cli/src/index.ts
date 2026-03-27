@@ -15,6 +15,7 @@
  */
 
 import * as readline from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
 // ─── ANSI Colours ────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ interface CommandSchema {
   hints?: { execution?: 'any' | 'browser' | 'server'; [key: string]: unknown };
 }
 
-interface SurfManifest {
+export interface SurfManifest {
   surf?: string;
   name?: string;
   description?: string;
@@ -70,7 +71,7 @@ interface ExecuteResponse {
 
 // ─── Argument Parsing ────────────────────────────────────────────────────────
 
-interface ParsedArgs {
+export interface ParsedArgs {
   command: string | undefined;
   url: string | undefined;
   subcommand: string | undefined;
@@ -82,7 +83,7 @@ interface ParsedArgs {
   basePath: string | undefined;
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0];
   const url = argv[1];
   const subcommand = argv[2];
@@ -122,7 +123,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function buildHeaders(auth?: string): Record<string, string> {
+export function buildHeaders(auth?: string): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (auth) headers['Authorization'] = `Bearer ${auth}`;
   return headers;
@@ -149,7 +150,7 @@ function promptUser(question: string): Promise<string> {
   });
 }
 
-function coerceValue(value: string, type?: string): unknown {
+export function coerceValue(value: string, type?: string): unknown {
   if (type === 'number') {
     const n = Number(value);
     return isNaN(n) ? value : n;
@@ -160,7 +161,7 @@ function coerceValue(value: string, type?: string): unknown {
   return value;
 }
 
-function syntaxHighlightJson(obj: unknown): string {
+export function syntaxHighlightJson(obj: unknown): string {
   const raw = JSON.stringify(obj, null, 2);
   if (!isTTY) return raw;
 
@@ -184,7 +185,7 @@ function syntaxHighlightJson(obj: unknown): string {
 
 // ─── Commands ────────────────────────────────────────────────────────────────
 
-async function ping(siteUrl: string, opts: ParsedArgs): Promise<void> {
+export async function ping(siteUrl: string, opts: ParsedArgs): Promise<void> {
   const start = performance.now();
   try {
     const manifestUrl = new URL('/.well-known/surf.json', siteUrl).toString();
@@ -216,7 +217,7 @@ async function ping(siteUrl: string, opts: ParsedArgs): Promise<void> {
   }
 }
 
-async function inspect(siteUrl: string, opts: ParsedArgs): Promise<void> {
+export async function inspect(siteUrl: string, opts: ParsedArgs): Promise<void> {
   const start = performance.now();
   try {
     const manifest = await fetchManifest(siteUrl, opts.auth);
@@ -294,7 +295,7 @@ async function inspect(siteUrl: string, opts: ParsedArgs): Promise<void> {
   }
 }
 
-async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Promise<void> {
+export async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Promise<void> {
   const totalStart = performance.now();
 
   // 1. Fetch manifest
@@ -550,7 +551,11 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(`${c.red}${(err as Error).message}${c.reset}`);
-  process.exit(1);
-});
+// Only run main() when this file is executed directly (not imported by tests)
+const _isMain = process.argv[1] != null && fileURLToPath(import.meta.url) === process.argv[1];
+if (_isMain) {
+  main().catch((err: Error) => {
+    console.error(`${c.red}${err.message}${c.reset}`);
+    process.exit(1);
+  });
+}
