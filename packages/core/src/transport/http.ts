@@ -166,6 +166,20 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
     }
 
     const command = registry.get(body.command);
+
+    // Reject browser-only commands called via HTTP
+    if (command?.hints?.execution === 'browser') {
+      res.writeHead(501, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({
+        ok: false,
+        error: {
+          code: 'NOT_SUPPORTED',
+          message: 'This command requires browser execution via window.surf',
+        },
+      }));
+      return;
+    }
+
     const wantsStream = body.stream === true && command?.stream === true;
 
     if (wantsStream) {

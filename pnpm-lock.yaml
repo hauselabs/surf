@@ -147,6 +147,10 @@ importers:
         version: 5.9.3
 
   packages/react:
+    dependencies:
+      '@surfjs/web':
+        specifier: workspace:*
+        version: link:../web
     devDependencies:
       '@types/react':
         specifier: ^18.3.28
@@ -154,6 +158,15 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
+  packages/web:
+    devDependencies:
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)

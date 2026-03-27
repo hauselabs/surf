@@ -246,10 +246,10 @@ export function SurfBadge({
     injectPsychStyles()
   }, [])
 
-  // Register window.surf (HTTP-only) when no SurfProvider is present
+  // Register window.surf with HTTP-only server executor when no SurfProvider is present
   const surfCtx = useContext(SurfContext)
   useEffect(() => {
-    // If SurfProvider is active, it handles window.surf registration
+    // If SurfProvider is active, it handles window.surf registration (WS executor)
     if (surfCtx) return
     const cleanup = registerWindowSurfHttp(endpoint)
     return cleanup

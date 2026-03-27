@@ -49,7 +49,7 @@ interface CommandSchema {
   description?: string;
   params?: Record<string, ParamSchema>;
   auth?: string;
-  hints?: Record<string, unknown>;
+  hints?: { execution?: 'any' | 'browser' | 'server'; [key: string]: unknown };
 }
 
 interface SurfManifest {
@@ -252,7 +252,9 @@ async function inspect(siteUrl: string, opts: ParsedArgs): Promise<void> {
         .join(', ');
 
       const auth = cmd.auth === 'required' ? ` ${c.red}🔐${c.reset}` : '';
-      console.log(`   ${c.bold}${c.green}${name}${c.reset}(${paramStr})${auth}`);
+      const execution = cmd.hints?.execution;
+      const execIcon = execution === 'browser' ? ` ${c.cyan}🌐 browser${c.reset}` : execution === 'server' ? ` ${c.magenta}📡 server${c.reset}` : '';
+      console.log(`   ${c.bold}${c.green}${name}${c.reset}(${paramStr})${auth}${execIcon}`);
 
       if (cmd.description) {
         console.log(`   ${c.dim}${cmd.description}${c.reset}`);
@@ -323,7 +325,21 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
     return;
   }
 
-  // 3. Fail fast on auth-required commands without token
+  // 3a. Fail fast on browser-only commands
+  if (cmdSchema.hints?.execution === 'browser') {
+    const msg = `"${commandName}" is a browser-only command — it requires execution via window.surf in a browser environment. It cannot be tested from the CLI.`;
+    if (opts.json) {
+      console.log(JSON.stringify({ ok: false, error: msg }));
+      process.exit(1);
+      return;
+    }
+    console.log(`\n   ${c.cyan}🌐${c.reset} ${c.bold}Browser-only command${c.reset}`);
+    console.log(`   ${c.dim}${msg}${c.reset}\n`);
+    process.exit(1);
+    return;
+  }
+
+  // 3b. Fail fast on auth-required commands without token
   if ((cmdSchema.auth === 'required' || cmdSchema.auth === 'hidden') && !opts.auth) {
     const msg = `${commandName} requires authentication. Provide a token with --auth <token>`;
     if (opts.json) {

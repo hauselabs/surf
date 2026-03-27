@@ -171,7 +171,7 @@ export function SurfProvider({ url, auth, channels, endpoint, children }: SurfPr
     };
   }, [connect]);
 
-  // Register window.surf global for browser-based agents
+  // Register window.surf global with WS-backed server executor
   useEffect(() => {
     const statusMap: Record<ConnectionStatus, 'connected' | 'disconnected' | 'connecting'> = {
       connected: 'connected',

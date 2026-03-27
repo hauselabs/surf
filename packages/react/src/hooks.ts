@@ -3,6 +3,8 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { SurfContext, type SurfContextValue, type EventCallback } from './context.js';
 import { deepMerge } from './deepMerge.js';
+import { registerCommand } from '@surfjs/web';
+import type { LocalHandlerMode, LocalHandler, CommandConfig } from '@surfjs/web';
 
 /**
  * Access the Surf context. Throws if used outside SurfProvider.
@@ -107,4 +109,60 @@ export function useSurfState<T>(key: string, initialState: T): [T, (value: T | (
   }, [key]));
 
   return [state, setState];
+}
+
+// ─── useSurfCommands ──────────────────────────────────────────────────────────
+
+/** Configuration for a single command handler in useSurfCommands. */
+export type SurfCommandConfig = CommandConfig;
+
+/** Map of command names to their configurations. */
+export type SurfCommandsMap = Record<string, SurfCommandConfig>;
+
+/**
+ * Register local command handlers with `window.surf`.
+ *
+ * Handlers run IN the browser, modifying local state directly.
+ * No server roundtrip for `mode: 'local'` commands.
+ * For `mode: 'sync'`, the handler runs locally AND the command is
+ * also POSTed to the server in the background for persistence.
+ *
+ * Works with or without `<SurfProvider>` — registers directly with `window.surf`
+ * via `@surfjs/web`.
+ *
+ * @example
+ * ```tsx
+ * useSurfCommands({
+ *   'canvas.addCircle': {
+ *     mode: 'local',
+ *     run: (params) => {
+ *       store.addCircle(params)
+ *       return { ok: true }
+ *     }
+ *   },
+ *   'doc.save': {
+ *     mode: 'sync',
+ *     run: (params) => {
+ *       store.saveLocal(params)
+ *       return { ok: true }
+ *     }
+ *   }
+ * })
+ * ```
+ */
+export function useSurfCommands(commands: SurfCommandsMap): void {
+  const commandsRef = useRef(commands);
+  commandsRef.current = commands;
+
+  useEffect(() => {
+    const cleanups = Object.entries(commandsRef.current).map(
+      ([name, config]) => registerCommand(name, config),
+    );
+
+    return () => {
+      for (const cleanup of cleanups) {
+        cleanup();
+      }
+    };
+  }, []);
 }

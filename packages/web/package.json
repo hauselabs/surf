@@ -1,7 +1,7 @@
 {
-  "name": "@surfjs/react",
-  "version": "0.4.3",
-  "description": "React SDK for Surf Live — real-time state sync between AI agents and your UI",
+  "name": "@surfjs/web",
+  "version": "0.1.0",
+  "description": "Framework-agnostic window.surf local execution runtime for Surf-enabled websites",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -26,32 +26,23 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@surfjs/web": "workspace:*"
-  },
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0"
-  },
   "devDependencies": {
-    "@types/react": "^18.3.28",
-    "react": "^18.3.1",
     "tsup": "^8.5.1",
     "typescript": "^5.8.0"
   },
   "license": "MIT",
   "keywords": [
     "surf",
-    "react",
     "ai",
     "agents",
-    "real-time",
-    "websocket",
-    "state-sync"
+    "browser",
+    "runtime",
+    "window.surf"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/hauselabs/surf.git",
-    "directory": "packages/react"
+    "directory": "packages/web"
   },
   "homepage": "https://surf.codes",
   "bugs": {

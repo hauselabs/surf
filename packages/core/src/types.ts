@@ -54,6 +54,8 @@ export interface CommandHints {
   sideEffects?: boolean;
   /** Estimated execution time in milliseconds — helps agents budget latency. */
   estimatedMs?: number;
+  /** Where this command can be executed. `'any'` (default), `'browser'` (client-side only via window.surf), or `'server'`. */
+  execution?: 'any' | 'browser' | 'server';
 }
 
 /**
