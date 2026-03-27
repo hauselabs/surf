@@ -5,6 +5,8 @@ export { WebSocketTransport } from './transport/websocket.js';
 export type { ConnectionState, WebSocketTransportOptions } from './transport/websocket.js';
 export { WindowTransport } from './transport/window.js';
 
+export { SURF_ERROR_CODES, isSurfErrorCode } from './types.js';
+
 export type {
   SurfManifest,
   ManifestCommand,

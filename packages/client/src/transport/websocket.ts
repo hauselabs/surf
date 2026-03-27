@@ -1,5 +1,15 @@
 import type { WsIncomingMessage, WsResultMessage, WsEventMessage, SurfResponse } from '../types.js';
 
+/** Type guard: verify that an unknown value has a `sessionId` string property. */
+function isSessionResult(value: unknown): value is { sessionId: string } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'sessionId' in value &&
+    typeof (value as Record<string, unknown>)['sessionId'] === 'string'
+  );
+}
+
 type EventCallback = (data: unknown) => void;
 
 interface PendingRequest {
@@ -283,12 +293,11 @@ export class WebSocketTransport {
       const id = 'session';
       this.pending.set(id, {
         resolve: (response) => {
-          if (response.ok) {
-            const result = response.result as { sessionId: string };
-            this.sessionId = result.sessionId;
-            resolve(result.sessionId);
+          if (response.ok && isSessionResult(response.result)) {
+            this.sessionId = response.result.sessionId;
+            resolve(response.result.sessionId);
           } else {
-            reject(new Error('Failed to start session'));
+            reject(new Error('Failed to start session: unexpected response shape'));
           }
         },
         reject,

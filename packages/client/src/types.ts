@@ -82,6 +82,23 @@ export type SurfErrorCode =
   | 'INTERNAL_ERROR'
   | 'NOT_SUPPORTED';
 
+/** Exhaustive list of valid SurfErrorCode values. */
+export const SURF_ERROR_CODES: readonly SurfErrorCode[] = [
+  'UNKNOWN_COMMAND',
+  'INVALID_PARAMS',
+  'AUTH_REQUIRED',
+  'AUTH_FAILED',
+  'SESSION_EXPIRED',
+  'RATE_LIMITED',
+  'INTERNAL_ERROR',
+  'NOT_SUPPORTED',
+] as const;
+
+/** Type guard: check whether a string is a valid SurfErrorCode. */
+export function isSurfErrorCode(code: string): code is SurfErrorCode {
+  return (SURF_ERROR_CODES as readonly string[]).includes(code);
+}
+
 export interface ExecuteResponse {
   ok: true;
   requestId?: string;

@@ -35,6 +35,11 @@ export class HttpTransport {
     this.auth = token;
   }
 
+  /** Expose the underlying fetch implementation for reuse in sibling concerns. */
+  getFetch(): typeof globalThis.fetch {
+    return this.fetch;
+  }
+
   async execute(
     command: string,
     params?: Record<string, unknown>,

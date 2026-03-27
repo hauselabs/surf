@@ -291,7 +291,7 @@ export class SurfClient {
     // Derive pipeline URL from the configured execute path (replace /execute → /pipeline)
     const pipelinePath = this.surfBasePath.replace(/\/execute$/, '/pipeline');
     const url = `${this.baseUrl}${pipelinePath}`;
-    const fetchFn = (this.http as unknown as { fetch: typeof globalThis.fetch }).fetch ?? globalThis.fetch;
+    const fetchFn = this.http.getFetch();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (this.auth) headers['Authorization'] = `Bearer ${this.auth}`;
 
@@ -333,7 +333,7 @@ export class SurfClient {
    * Re-fetch the manifest and check if the checksum has changed.
    */
   async checkForUpdates(): Promise<UpdateCheckResult & { manifest?: SurfManifest }> {
-    const fetchFn = (this.http as unknown as { fetch: typeof globalThis.fetch }).fetch ?? globalThis.fetch;
+    const fetchFn = this.http.getFetch();
     try {
       const fresh = await discoverManifest(this.baseUrl, fetchFn, undefined, this.auth);
       const changed = fresh.checksum !== this.manifest.checksum;

@@ -1,4 +1,5 @@
-import type { SurfManifest, SurfResponse } from '../types.js';
+import type { SurfManifest, SurfResponse, SurfErrorCode } from '../types.js';
+import { isSurfErrorCode } from '../types.js';
 
 type EventCallback = (data: unknown) => void;
 
@@ -71,12 +72,23 @@ export class WindowTransport {
       const result = await this.surf.execute(command, params);
       return { ok: true, result };
     } catch (e) {
-      const error = e as { code?: string; message?: string };
+      const rawCode =
+        e != null &&
+        typeof e === 'object' &&
+        'code' in e &&
+        typeof (e as Record<string, unknown>)['code'] === 'string'
+          ? ((e as Record<string, string>)['code'])
+          : undefined;
+
+      const errCode: SurfErrorCode =
+        rawCode !== undefined && isSurfErrorCode(rawCode) ? rawCode : 'INTERNAL_ERROR';
+      const errMsg = e instanceof Error ? e.message : 'Unknown error';
+
       return {
-        ok: false as const,
+        ok: false,
         error: {
-          code: (error.code ?? 'INTERNAL_ERROR') as 'INTERNAL_ERROR',
-          message: error.message ?? 'Unknown error',
+          code: errCode,
+          message: errMsg,
         },
       };
     }
