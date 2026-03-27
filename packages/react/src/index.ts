@@ -6,7 +6,7 @@ export type { SurfProviderProps } from './provider.js';
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export { useSurf, useSurfEvent, useSurfChannel, useSurfState, useSurfCommands } from './hooks.js';
-export type { SurfCommandConfig, SurfCommandsMap } from './hooks.js';
+export type { SurfCommandConfig, SurfCommandsMap, SurfChannelControls } from './hooks.js';
 
 // ─── Components ───────────────────────────────────────────────────────────────
 

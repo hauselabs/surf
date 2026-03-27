@@ -94,22 +94,23 @@ function parseArgs(argv: string[]): ParsedArgs {
 
   let i = command === 'test' ? 3 : 2;
   while (i < argv.length) {
-    const arg = argv[i];
+    // Loop bound guarantees argv[i] exists; noUncheckedIndexedAccess requires the assertion.
+    const arg = argv[i] as string;
     if (arg === '--json') {
       json = true;
       i++;
     } else if (arg === '--auth' && i + 1 < argv.length) {
-      auth = argv[i + 1];
+      auth = argv[i + 1] as string; // bounds-checked above
       i += 2;
     } else if (arg === '--verbose') {
       verbose = true;
       i++;
     } else if ((arg === '--base-path' || arg === '--basePath') && i + 1 < argv.length) {
-      basePath = argv[i + 1];
+      basePath = argv[i + 1] as string; // bounds-checked above
       i += 2;
     } else if (arg.startsWith('--') && i + 1 < argv.length) {
       const key = arg.slice(2);
-      params[key] = argv[i + 1];
+      params[key] = argv[i + 1] as string; // bounds-checked above
       i += 2;
     } else {
       i++;
@@ -358,8 +359,9 @@ async function test(siteUrl: string, commandName: string, opts: ParsedArgs): Pro
 
   // Copy provided params
   for (const [key, value] of Object.entries(opts.params)) {
-    if (key in paramSchemas) {
-      resolvedParams[key] = coerceValue(value, paramSchemas[key].type);
+    const schema = paramSchemas[key]; // may be undefined if not in manifest
+    if (schema !== undefined) {
+      resolvedParams[key] = coerceValue(value, schema.type);
     } else {
       resolvedParams[key] = value;
     }

@@ -39,12 +39,22 @@ export function useSurfEvent(event: string, callback: EventCallback): void {
   }, [ctx, event]);
 }
 
+/** Controls returned by the {@link useSurfChannel} hook. */
+export interface SurfChannelControls {
+  /** Subscribe to a channel. */
+  subscribe: (channelId: string) => void;
+  /** Unsubscribe from a channel. */
+  unsubscribe: (channelId: string) => void;
+  /** Currently subscribed channels. */
+  channels: ReadonlySet<string>;
+}
+
 /**
  * Manage channel subscriptions dynamically.
  *
  * @returns Object with subscribe/unsubscribe functions and current channels set.
  */
-export function useSurfChannel() {
+export function useSurfChannel(): SurfChannelControls {
   const ctx = useSurf();
 
   return {
