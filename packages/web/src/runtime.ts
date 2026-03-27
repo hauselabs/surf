@@ -59,20 +59,26 @@ async function fetchManifest(): Promise<SurfManifest> {
   if (cachedManifest.commands) {
     commandsCache = {};
     for (const [name, def] of Object.entries(cachedManifest.commands)) {
-      const cmd = def as Record<string, unknown>;
+      const cmd = isPlainObject(def) ? def : {};
+      const rawDesc = cmd['description'];
+      const rawParams = cmd['params'];
       commandsCache[name] = {
-        description: (cmd.description as string) ?? '',
-        params: cmd.params as Record<string, unknown> | undefined,
+        description: typeof rawDesc === 'string' ? rawDesc : '',
+        params: isPlainObject(rawParams) ? rawParams : undefined,
       };
     }
   }
   return cachedManifest;
 }
 
-// ─── Type guard ───────────────────────────────────────────────────────────────
+// ─── Type guards ─────────────────────────────────────────────────────────────
 
 function isExecuteResult(value: unknown): value is SurfExecuteResult {
   return typeof value === 'object' && value !== null && 'ok' in value;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // ─── Build the SurfGlobal instance ────────────────────────────────────────────

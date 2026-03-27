@@ -9,6 +9,7 @@ import {
   getErrorStatus,
   extractAuth,
   extractIp,
+  extractSessionId,
   CORS_HEADERS,
 } from './shared.js';
 
@@ -282,9 +283,10 @@ export function createSurfRouteHandler(
     // ─── POST /surf/session/end ──────────────────────────────────────
     if (route === '/surf/session/end' || route === '/session/end') {
       try {
-        const body = await request.json() as { sessionId?: string };
-        if (body?.sessionId) {
-          await sessions.destroy(body.sessionId);
+        const body: unknown = await request.json();
+        const sessionIdToDestroy = extractSessionId(body);
+        if (sessionIdToDestroy) {
+          await sessions.destroy(sessionIdToDestroy);
         }
       } catch {
         // Ignore parse errors for session end
@@ -301,4 +303,4 @@ export function createSurfRouteHandler(
   return { GET, POST };
 }
 
-export { getErrorStatus, extractAuth, extractIp } from './shared.js';
+export { getErrorStatus, extractAuth, extractIp, extractSessionId } from './shared.js';

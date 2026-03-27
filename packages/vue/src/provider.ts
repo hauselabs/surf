@@ -112,8 +112,15 @@ export const SurfProvider = defineComponent({
           if (p) {
             pending.delete(msg.id);
             if (msg.id === 'session' && msg.ok && msg.result) {
-              const res = msg.result as { sessionId: string };
-              sessionId.value = res.sessionId;
+              const res = msg.result;
+              if (
+                typeof res === 'object' &&
+                res !== null &&
+                'sessionId' in res &&
+                typeof (res as Record<string, unknown>)['sessionId'] === 'string'
+              ) {
+                sessionId.value = (res as { sessionId: string }).sessionId;
+              }
             }
             p.resolve({
               ok: msg.ok ?? false,

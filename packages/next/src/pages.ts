@@ -9,6 +9,7 @@ import {
   getErrorStatus,
   extractAuth,
   extractIp,
+  extractSessionId,
   CORS_HEADERS,
 } from './shared.js';
 
@@ -254,9 +255,9 @@ export function createSurfApiHandler(
 
     // ─── POST /surf/session/end ──────────────────────────────────────
     if (route === '/surf/session/end' || route === '/session/end') {
-      const body = req.body as { sessionId?: string } | undefined;
-      if (body?.sessionId) {
-        await sessions.destroy(body.sessionId);
+      const sessionIdToDestroy = extractSessionId(req.body);
+      if (sessionIdToDestroy) {
+        await sessions.destroy(sessionIdToDestroy);
       }
       sendJson(res, 200, { ok: true });
       return;
@@ -266,4 +267,4 @@ export function createSurfApiHandler(
   };
 }
 
-export { getErrorStatus, extractAuth, extractIp } from './shared.js';
+export { getErrorStatus, extractAuth, extractIp, extractSessionId } from './shared.js';
