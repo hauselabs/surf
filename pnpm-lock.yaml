@@ -66,8 +66,8 @@ importers:
   packages/cli:
     dependencies:
       '@surfjs/client':
-        specifier: ^0.3.10
-        version: 0.3.10(ws@8.19.0)
+        specifier: workspace:*
+        version: link:../client
     devDependencies:
       tsup:
         specifier: ^8.4.0
@@ -115,8 +115,8 @@ importers:
   packages/devui:
     dependencies:
       '@surfjs/core':
-        specifier: ^0.3.10
-        version: 0.3.10(fastify@5.8.2)(hono@4.12.8)(ws@8.19.0)
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -129,10 +129,11 @@ importers:
         version: 5.9.3
 
   packages/next:
-    devDependencies:
+    dependencies:
       '@surfjs/core':
-        specifier: ^0.3.10
-        version: 0.3.10(fastify@5.8.2)(hono@4.12.8)(ws@8.19.0)
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.15
@@ -207,10 +208,11 @@ importers:
         version: 5.9.3
 
   packages/zod:
-    devDependencies:
+    dependencies:
       '@surfjs/core':
-        specifier: ^0.3.10
-        version: 0.3.10(fastify@5.8.2)(hono@4.12.8)(ws@8.19.0)
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)
@@ -865,28 +867,6 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
-
-  '@surfjs/client@0.3.10':
-    resolution: {integrity: sha512-017sG0HE5CgwwIvfP8qwtXfi8v0TGaMI+Vf+jJWN7VGIgh2/Yv8M1R87AAuzj6a+sRS3kVL3VMO2cdVJab9ygQ==}
-    peerDependencies:
-      ws: '>=8.0.0'
-    peerDependenciesMeta:
-      ws:
-        optional: true
-
-  '@surfjs/core@0.3.10':
-    resolution: {integrity: sha512-WTBmXQ4j5e2C2h9j7eTj03nIrp7z6ki/LRw+a1rq3c1SwkFtInB6qChgW01mfA9orSb+q/PRJ4JuYKTsqqT4bQ==}
-    peerDependencies:
-      fastify: '>=4.0.0'
-      hono: '>=4.0.0'
-      ws: '>=8.0.0'
-    peerDependenciesMeta:
-      fastify:
-        optional: true
-      hono:
-        optional: true
-      ws:
-        optional: true
 
   '@sveltejs/acorn-typescript@1.0.9':
     resolution: {integrity: sha512-lVJX6qEgs/4DOcRTpo56tmKzVPtoWAaVbL4hfO7t7NVwl9AAXzQR6cihesW1BmNMPl+bK6dreu2sOKBP2Q9CIA==}
@@ -2466,16 +2446,6 @@ snapshots:
     optional: true
 
   '@standard-schema/spec@1.1.0': {}
-
-  '@surfjs/client@0.3.10(ws@8.19.0)':
-    optionalDependencies:
-      ws: 8.19.0
-
-  '@surfjs/core@0.3.10(fastify@5.8.2)(hono@4.12.8)(ws@8.19.0)':
-    optionalDependencies:
-      fastify: 5.8.2
-      hono: 4.12.8
-      ws: 8.19.0
 
   '@sveltejs/acorn-typescript@1.0.9(acorn@8.16.0)':
     dependencies:

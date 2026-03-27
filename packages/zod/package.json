@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/zod",
-  "version": "0.3.11",
+  "version": "0.5.0",
   "description": "Zod schema integration for Surf.js — define commands with Zod instead of raw ParamSchema",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -27,7 +27,7 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@surfjs/core": ">=0.2.0",
+    "@surfjs/core": ">=0.5.0",
     "zod": "^3.0.0 || ^4.0.0"
   },
   "devDependencies": {
@@ -57,5 +57,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@surfjs/core": "workspace:*"
   }
 }
