@@ -143,6 +143,7 @@ export type { InferParam, InferParams } from './infer.js';
 
 export { CommandRegistry } from './commands.js';
 export { InMemorySessionStore } from './session.js';
+export type { InMemorySessionStoreOptions } from './session.js';
 export { EventBus } from './events.js';
 export type { EventScope, ScopedEventDefinition, SubscribeOptions } from './events.js';
 export { generateManifest, type ManifestOptions } from './manifest.js';

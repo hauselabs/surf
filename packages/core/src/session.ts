@@ -5,6 +5,14 @@ function generateId(): string {
   return `sess_${crypto.randomUUID()}`;
 }
 
+/** Options for {@link InMemorySessionStore}. */
+export interface InMemorySessionStoreOptions {
+  /** Session time-to-live in milliseconds. Defaults to 30 minutes. */
+  ttlMs?: number;
+  /** Maximum number of sessions to keep. When exceeded the least-recently-accessed sessions are evicted. Defaults to 10 000. */
+  maxSessions?: number;
+}
+
 /**
  * In-memory session store. Good for development and single-process apps.
  * Implement SessionStore interface for Redis/database-backed sessions.
@@ -12,9 +20,17 @@ function generateId(): string {
 export class InMemorySessionStore implements SessionStore {
   private readonly sessions = new Map<string, Session>();
   private readonly ttlMs: number;
+  private readonly maxSessions: number;
 
-  constructor(ttlMs = 30 * 60 * 1000) {
-    this.ttlMs = ttlMs;
+  constructor(options?: number | InMemorySessionStoreOptions) {
+    if (typeof options === 'number') {
+      // Legacy signature: constructor(ttlMs)
+      this.ttlMs = options;
+      this.maxSessions = 10_000;
+    } else {
+      this.ttlMs = options?.ttlMs ?? 30 * 60 * 1000;
+      this.maxSessions = options?.maxSessions ?? 10_000;
+    }
   }
 
   async create(): Promise<Session> {
@@ -27,6 +43,7 @@ export class InMemorySessionStore implements SessionStore {
     };
     this.sessions.set(session.id, session);
     this.cleanup();
+    this.evictIfOverLimit();
     return session;
   }
 
@@ -40,6 +57,11 @@ export class InMemorySessionStore implements SessionStore {
     }
 
     session.lastAccessedAt = Date.now();
+
+    // Move to end of Map for LRU ordering
+    this.sessions.delete(id);
+    this.sessions.set(id, session);
+
     return session;
   }
 
@@ -54,6 +76,21 @@ export class InMemorySessionStore implements SessionStore {
 
   async destroy(id: string): Promise<void> {
     this.sessions.delete(id);
+  }
+
+  /** Evict least-recently-used sessions when over the limit. */
+  private evictIfOverLimit(): void {
+    if (this.sessions.size <= this.maxSessions) return;
+
+    // Map iteration order is insertion order.
+    // Because we re-insert on access (get), the oldest entries are first.
+    const toEvict = this.sessions.size - this.maxSessions;
+    let evicted = 0;
+    for (const id of this.sessions.keys()) {
+      if (evicted >= toEvict) break;
+      this.sessions.delete(id);
+      evicted++;
+    }
   }
 
   private cleanup(): void {
