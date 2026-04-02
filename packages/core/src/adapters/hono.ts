@@ -6,6 +6,7 @@ import type {
 } from '../types.js';
 import { executePipeline } from '../transport/pipeline.js';
 import { assertNotPromise } from '../errors.js';
+import { resolveCorsHeaders, resolveCorsPreflightHeaders } from '../cors.js';
 
 // ─── Minimal interfaces for Hono types (no hard dependency) ────────────
 
@@ -77,6 +78,14 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
     return c.req.header('x-real-ip');
   }
 
+  function getCorsHeaders(c: HonoContext): Record<string, string> {
+    return resolveCorsHeaders(surf.corsConfig, c.req.header('origin'));
+  }
+
+  function getCorsPreflightHeaders(c: HonoContext, methods?: string): Record<string, string> {
+    return resolveCorsPreflightHeaders(surf.corsConfig, c.req.header('origin'), methods);
+  }
+
   function getErrorStatus(code: string): number {
     switch (code) {
       case 'UNKNOWN_COMMAND': return 404;
@@ -91,11 +100,6 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
   }
 
   // ─── OPTIONS (CORS preflight) ────────────────────────────────────────
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
   const optionsRoutes = [
     '/.well-known/surf.json',
     '/surf/execute',
@@ -105,7 +109,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
   ];
   for (const route of optionsRoutes) {
     app.options(route, (c: HonoContext) => {
-      return c.body(null, 204, corsHeaders);
+      return c.body(null, 204, getCorsPreflightHeaders(c));
     });
   }
 
@@ -119,14 +123,14 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
       return c.body(null, 304, {
         'ETag': etag,
         'Cache-Control': 'public, max-age=300',
-        'Access-Control-Allow-Origin': '*',
+        ...getCorsHeaders(c),
       });
     }
 
     return c.json(manifestData, 200, {
       'ETag': etag,
       'Cache-Control': 'public, max-age=300',
-      'Access-Control-Allow-Origin': '*',
+      ...getCorsHeaders(c),
     });
   });
 
@@ -139,7 +143,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
       return c.json(
         { ok: false, error: { code: 'INVALID_PARAMS', message: 'Invalid JSON body' } },
         400,
-        { 'Access-Control-Allow-Origin': '*' },
+        getCorsHeaders(c),
       );
     }
 
@@ -147,7 +151,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
       return c.json(
         { ok: false, error: { code: 'INVALID_PARAMS', message: 'Missing command field' } },
         400,
-        { 'Access-Control-Allow-Origin': '*' },
+        getCorsHeaders(c),
       );
     }
 
@@ -207,7 +211,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
+          ...getCorsHeaders(c),
         },
       });
     }
@@ -227,7 +231,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
 
     const statusCode = response.ok ? 200 : getErrorStatus(response.error.code);
     const headers: Record<string, string> = {
-      'Access-Control-Allow-Origin': '*',
+      ...getCorsHeaders(c),
     };
 
     if (!response.ok && response.error.code === 'RATE_LIMITED') {
@@ -261,7 +265,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
         sessions as Parameters<typeof executePipeline>[2],
         auth,
       );
-      return c.json(result, 200, { 'Access-Control-Allow-Origin': '*' });
+      return c.json(result, 200, getCorsHeaders(c));
     } catch (e) {
       return c.json(
         { ok: false, error: { code: 'INTERNAL_ERROR', message: e instanceof Error ? e.message : 'Unknown error' } },
@@ -273,9 +277,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
   // ─── POST /surf/session/start ────────────────────────────────────────
   app.post('/surf/session/start', async (c: HonoContext) => {
     const session = await sessions.create();
-    return c.json({ ok: true, sessionId: session.id }, 200, {
-      'Access-Control-Allow-Origin': '*',
-    });
+    return c.json({ ok: true, sessionId: session.id }, 200, getCorsHeaders(c));
   });
 
   // ─── POST /surf/session/end ──────────────────────────────────────────
@@ -284,9 +286,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
     if (body?.sessionId) {
       await sessions.destroy(body.sessionId);
     }
-    return c.json({ ok: true }, 200, {
-      'Access-Control-Allow-Origin': '*',
-    });
+    return c.json({ ok: true }, 200, getCorsHeaders(c));
   });
 
   return app;

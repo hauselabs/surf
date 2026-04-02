@@ -1,6 +1,8 @@
 import type { SurfManifest, ExecuteRequest, SurfResponse, HttpHandler } from '../types.js';
 import type { CommandRegistry } from '../commands.js';
 import type { InMemorySessionStore } from '../session.js';
+import type { CorsConfig } from '../cors.js';
+import { resolveCorsHeaders, resolveCorsPreflightHeaders } from '../cors.js';
 import { executePipeline } from './pipeline.js';
 import { createSseWriter, chunkEvent, doneEvent, errorEvent } from './sse.js';
 
@@ -9,6 +11,7 @@ interface HttpTransportOptions {
   registry: CommandRegistry;
   sessions: InMemorySessionStore;
   getAuth: (headers: Record<string, string | string[] | undefined>) => string | undefined;
+  corsConfig?: CorsConfig;
 }
 
 /**
@@ -67,6 +70,7 @@ export function createManifestHandler(
   manifest: SurfManifest,
   authedManifest?: SurfManifest,
   authVerifier?: (token: string) => unknown,
+  corsConfig?: CorsConfig,
 ): HttpHandler {
   const publicBody = JSON.stringify(manifest, null, 2);
   const publicEtag = `"${manifest.checksum}"`;
@@ -74,6 +78,9 @@ export function createManifestHandler(
   const authedEtag = authedManifest ? `"${authedManifest.checksum}"` : null;
 
   return async (req, res) => {
+    const requestOrigin = getHeader(req.headers, 'origin');
+    const cors = resolveCorsHeaders(corsConfig, requestOrigin);
+
     // Determine if this request should see hidden commands
     let useAuthed = false;
     if (authedBody && authedEtag) {
@@ -96,7 +103,7 @@ export function createManifestHandler(
     if (ifNoneMatch && ifNoneMatch === etag) {
       res.writeHead(304, {
         'ETag': etag,
-        'Access-Control-Allow-Origin': '*',
+        ...cors,
         'Cache-Control': useAuthed ? 'private, max-age=300' : 'public, max-age=300',
       });
       res.end();
@@ -105,7 +112,7 @@ export function createManifestHandler(
 
     res.writeHead(200, {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      ...cors,
       'Cache-Control': useAuthed ? 'private, max-age=300' : 'public, max-age=300',
       'ETag': etag,
     });
@@ -118,15 +125,13 @@ export function createManifestHandler(
  * Supports regular JSON responses and SSE streaming.
  */
 export function createExecuteHandler(options: HttpTransportOptions): HttpHandler {
-  const { registry, sessions, getAuth } = options;
+  const { registry, sessions, getAuth, corsConfig } = options;
 
   return async (req, res) => {
+    const requestOrigin = getHeader(req.headers, 'origin');
+
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      });
+      res.writeHead(204, resolveCorsPreflightHeaders(corsConfig, requestOrigin, 'POST, OPTIONS'));
       res.end();
       return;
     }
@@ -158,7 +163,7 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
     if (body.sessionId) {
       const session = await sessions.get(body.sessionId);
       if (!session) {
-        res.writeHead(410, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(410, { 'Content-Type': 'application/json', ...resolveCorsHeaders(corsConfig, requestOrigin) });
         res.end(JSON.stringify({ ok: false, error: { code: 'SESSION_EXPIRED', message: `Session "${body.sessionId}" has expired or been destroyed` } }));
         return;
       }
@@ -169,7 +174,7 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
 
     // Reject browser-only commands called via HTTP
     if (command?.hints?.execution === 'browser') {
-      res.writeHead(501, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(501, { 'Content-Type': 'application/json', ...resolveCorsHeaders(corsConfig, requestOrigin) });
       res.end(JSON.stringify({
         ok: false,
         error: {
@@ -190,7 +195,7 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
         end(body?: string): void;
         flushHeaders?: () => void;
       };
-      const sse = createSseWriter(sseRes);
+      const sse = createSseWriter(sseRes, resolveCorsHeaders(corsConfig, requestOrigin));
 
       const chunks: unknown[] = [];
       const context = {
@@ -238,9 +243,10 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
       ? Math.ceil(((response.error.details?.['retryAfterMs'] as number | undefined) ?? 0) / 1000)
       : undefined;
 
+    const cors = resolveCorsHeaders(corsConfig, requestOrigin);
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      ...cors,
     };
     if (retryAfter !== undefined) {
       headers['Retry-After'] = String(retryAfter);
@@ -254,7 +260,7 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
       res.writeHead(statusCode, headers);
       res.end(body);
     } catch {
-      res.writeHead(500, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(500, { 'Content-Type': 'application/json', ...cors });
       res.end(JSON.stringify({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to serialize response' } }));
     }
   };
@@ -263,22 +269,24 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
 /**
  * Creates session management handlers.
  */
-export function createSessionHandlers(sessions: InMemorySessionStore): {
+export function createSessionHandlers(sessions: InMemorySessionStore, corsConfig?: CorsConfig): {
   start: HttpHandler;
   end: HttpHandler;
 } {
   return {
-    start: async (_req, res) => {
+    start: async (req, res) => {
+      const cors = resolveCorsHeaders(corsConfig, getHeader(req.headers, 'origin'));
       const session = await sessions.create();
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
       res.end(JSON.stringify({ ok: true, sessionId: session.id }));
     },
     end: async (req, res) => {
+      const cors = resolveCorsHeaders(corsConfig, getHeader(req.headers, 'origin'));
       const body = (await parseBody(req as never)) as { sessionId?: string };
       if (body.sessionId) {
         await sessions.destroy(body.sessionId);
       }
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+      res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
       res.end(JSON.stringify({ ok: true }));
     },
   };
@@ -293,8 +301,9 @@ export function createMiddleware(
   sessionHandlers: { start: HttpHandler; end: HttpHandler },
   pipelineOptions?: { registry: CommandRegistry; sessions: InMemorySessionStore; getAuth: (h: Record<string, string | string[] | undefined>) => string | undefined },
   manifestOptions?: { authedManifest?: SurfManifest; authVerifier?: (token: string) => unknown },
+  corsConfig?: CorsConfig,
 ): HttpHandler {
-  const manifestHandler = createManifestHandler(manifest, manifestOptions?.authedManifest, manifestOptions?.authVerifier);
+  const manifestHandler = createManifestHandler(manifest, manifestOptions?.authedManifest, manifestOptions?.authVerifier, corsConfig);
 
   return async (req, res) => {
     const url = req.url ?? '';
@@ -302,11 +311,8 @@ export function createMiddleware(
 
     // Universal CORS preflight
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      });
+      const requestOrigin = getHeader(req.headers, 'origin');
+      res.writeHead(204, resolveCorsPreflightHeaders(corsConfig, requestOrigin));
       res.end();
       return;
     }
@@ -320,7 +326,7 @@ export function createMiddleware(
     }
 
     if (path === '/surf/pipeline' && req.method === 'POST' && pipelineOptions) {
-      return handlePipeline(req, res, pipelineOptions);
+      return handlePipeline(req, res, pipelineOptions, corsConfig);
     }
 
     if (path === '/surf/session/start' && req.method === 'POST') {
@@ -403,13 +409,12 @@ async function handlePipeline(
   req: Parameters<HttpHandler>[0],
   res: Parameters<HttpHandler>[1],
   options: { registry: CommandRegistry; sessions: InMemorySessionStore; getAuth: (h: Record<string, string | string[] | undefined>) => string | undefined },
+  corsConfig?: CorsConfig,
 ): Promise<void> {
+  const requestOrigin = getHeader(req.headers, 'origin');
+
   if (req.method === 'OPTIONS') {
-    res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    });
+    res.writeHead(204, resolveCorsPreflightHeaders(corsConfig, requestOrigin, 'POST, OPTIONS'));
     res.end();
     return;
   }
@@ -426,7 +431,7 @@ async function handlePipeline(
   // Validate pipeline request body structure
   const validationError = validatePipelineBody(body);
   if (validationError) {
-    res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.writeHead(400, { 'Content-Type': 'application/json', ...resolveCorsHeaders(corsConfig, requestOrigin) });
     res.end(JSON.stringify({ ok: false, error: { code: 'INVALID_PARAMS', message: validationError } }));
     return;
   }
@@ -440,7 +445,7 @@ async function handlePipeline(
       options.sessions,
       auth,
     );
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.writeHead(200, { 'Content-Type': 'application/json', ...resolveCorsHeaders(corsConfig, requestOrigin) });
     res.end(JSON.stringify(result));
   } catch (e) {
     res.writeHead(500, { 'Content-Type': 'application/json' });

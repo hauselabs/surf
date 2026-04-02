@@ -139,6 +139,11 @@ export { paginatedResult } from './pagination.js';
 export { defineCommand } from './infer.js';
 export type { InferParam, InferParams } from './infer.js';
 
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+
+export type { CorsConfig } from './cors.js';
+export { resolveCorsHeaders, resolveCorsPreflightHeaders } from './cors.js';
+
 // ─── Internal utilities (for advanced use) ────────────────────────────────────
 
 export { CommandRegistry } from './commands.js';

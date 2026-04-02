@@ -290,6 +290,14 @@ export interface SurfConfig {
   strict?: boolean;
   /** Enable debug mode — exposes detailed error messages. Disable in production. */
   debug?: boolean;
+  /**
+   * CORS configuration for all HTTP transports and adapters.
+   *
+   * - Omit or set `origin: '*'` for default wildcard (backwards-compatible).
+   * - Provide a string, string array, or function for restrictive origins.
+   * - Set `credentials: true` to include `Access-Control-Allow-Credentials`.
+   */
+  cors?: import('./cors.js').CorsConfig;
   /** Surf Live — real-time state sync configuration. Disabled by default. */
   live?: LiveConfig;
 }

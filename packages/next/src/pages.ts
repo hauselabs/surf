@@ -10,7 +10,6 @@ import {
   extractAuth,
   extractIp,
   extractSessionId,
-  CORS_HEADERS,
 } from './shared.js';
 
 /**
@@ -84,8 +83,13 @@ export function createSurfApiHandler(
     return '/' + parts.join('/');
   }
 
-  function sendJson(res: PagesApiResponse, status: number, body: unknown, extraHeaders?: Record<string, string>): void {
-    for (const [k, v] of Object.entries(CORS_HEADERS)) {
+  function getCorsHeaders(req: PagesApiRequest): Record<string, string> {
+    return surf.corsHeaders(headerValue(req.headers['origin']));
+  }
+
+  function sendJson(res: PagesApiResponse, status: number, body: unknown, extraHeaders?: Record<string, string>, req?: PagesApiRequest): void {
+    const cors = req ? getCorsHeaders(req) : { 'Access-Control-Allow-Origin': '*' };
+    for (const [k, v] of Object.entries(cors)) {
       res.setHeader(k, v);
     }
     if (extraHeaders) {
@@ -109,7 +113,7 @@ export function createSurfApiHandler(
       if (headerValue(req.headers['if-none-match']) === etag) {
         res.setHeader('ETag', etag);
         res.setHeader('Cache-Control', 'public, max-age=300');
-        for (const [k, v] of Object.entries(CORS_HEADERS)) {
+        for (const [k, v] of Object.entries(getCorsHeaders(req))) {
           res.setHeader(k, v);
         }
         res.status(304).end();
@@ -119,13 +123,13 @@ export function createSurfApiHandler(
       sendJson(res, 200, manifestData, {
         'ETag': etag,
         'Cache-Control': 'public, max-age=300',
-      });
+      }, req);
       return;
     }
 
     // Only POST beyond this point
     if (method !== 'POST') {
-      sendJson(res, 405, { ok: false, error: { code: 'NOT_SUPPORTED', message: `Method ${method} not allowed` } });
+      sendJson(res, 405, { ok: false, error: { code: 'NOT_SUPPORTED', message: `Method ${method} not allowed` } }, undefined, req);
       return;
     }
 
@@ -140,7 +144,7 @@ export function createSurfApiHandler(
       const body = req.body as ExecuteRequest | undefined;
 
       if (!body?.command || typeof body.command !== 'string') {
-        sendJson(res, 400, { ok: false, error: { code: 'INVALID_PARAMS', message: 'Missing command field' } });
+        sendJson(res, 400, { ok: false, error: { code: 'INVALID_PARAMS', message: 'Missing command field' } }, undefined, req);
         return;
       }
 
@@ -159,7 +163,7 @@ export function createSurfApiHandler(
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
+          ...getCorsHeaders(req),
         });
         if (res.flushHeaders) res.flushHeaders();
 
@@ -217,7 +221,7 @@ export function createSurfApiHandler(
         extraHeaders['Retry-After'] = String(Math.ceil(retryMs / 1000));
       }
 
-      sendJson(res, statusCode, response, extraHeaders);
+      sendJson(res, statusCode, response, extraHeaders, req);
       return;
     }
 
@@ -226,7 +230,7 @@ export function createSurfApiHandler(
       const body = req.body as PipelineRequest | undefined;
 
       if (!body) {
-        sendJson(res, 400, { ok: false, error: { code: 'INVALID_PARAMS', message: 'Missing request body' } });
+        sendJson(res, 400, { ok: false, error: { code: 'INVALID_PARAMS', message: 'Missing request body' } }, undefined, req);
         return;
       }
 
@@ -237,12 +241,12 @@ export function createSurfApiHandler(
           sessions as Parameters<typeof executePipeline>[2],
           auth,
         );
-        sendJson(res, 200, result);
+        sendJson(res, 200, result, undefined, req);
       } catch (e) {
         sendJson(res, 500, {
           ok: false,
           error: { code: 'INTERNAL_ERROR', message: e instanceof Error ? e.message : 'Unknown error' },
-        });
+        }, undefined, req);
       }
       return;
     }
@@ -250,7 +254,7 @@ export function createSurfApiHandler(
     // ─── POST /surf/session/start ────────────────────────────────────
     if (route === '/surf/session/start' || route === '/session/start') {
       const session = await sessions.create();
-      sendJson(res, 200, { ok: true, sessionId: session.id });
+      sendJson(res, 200, { ok: true, sessionId: session.id }, undefined, req);
       return;
     }
 
@@ -260,11 +264,11 @@ export function createSurfApiHandler(
       if (sessionIdToDestroy) {
         await sessions.destroy(sessionIdToDestroy);
       }
-      sendJson(res, 200, { ok: true });
+      sendJson(res, 200, { ok: true }, undefined, req);
       return;
     }
 
-    sendJson(res, 404, { ok: false, error: { code: 'NOT_FOUND', message: `Unknown route: POST ${route}` } });
+    sendJson(res, 404, { ok: false, error: { code: 'NOT_FOUND', message: `Unknown route: POST ${route}` } }, undefined, req);
   };
 }
 

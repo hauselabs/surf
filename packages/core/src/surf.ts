@@ -18,6 +18,8 @@ import {
   createMiddleware,
   createSessionHandlers,
 } from './transport/http.js';
+import type { CorsConfig } from './cors.js';
+import { resolveCorsHeaders, resolveCorsPreflightHeaders } from './cors.js';
 import { attachWebSocket } from './transport/websocket.js';
 import { generateBrowserScript, createWindowBridge } from './transport/window.js';
 
@@ -57,6 +59,12 @@ export interface SurfInstance {
   emit(event: string, data: unknown): void;
   /** Surf Live real-time state sync. Only available when `live.enabled` is true. */
   readonly live: SurfLive;
+  /** Resolve CORS headers for a given request origin. */
+  corsHeaders(requestOrigin: string | undefined | null): Record<string, string>;
+  /** Resolve CORS preflight headers (OPTIONS) for a given request origin. */
+  corsPreflightHeaders(requestOrigin: string | undefined | null, methods?: string, allowHeaders?: string): Record<string, string>;
+  /** The raw CORS config, if any. */
+  readonly corsConfig: CorsConfig | undefined;
   readonly events: EventBus;
   readonly sessions: SessionStore;
   readonly commands: CommandRegistry;
@@ -120,9 +128,10 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
     registry,
     sessions: sessionStore,
     getAuth,
+    corsConfig: config.cors,
   });
 
-  const sessionHandlers = createSessionHandlers(sessionStore);
+  const sessionHandlers = createSessionHandlers(sessionStore, config.cors);
 
   return {
     use(mw: SurfMiddleware) {
@@ -152,9 +161,9 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
         const verifier = config.authVerifier
           ? async (token: string) => { const r = await config.authVerifier!(token, '__manifest__'); return r.valid; }
           : undefined;
-        return createManifestHandler(manifestData, manifestDataAuthed, verifier);
+        return createManifestHandler(manifestData, manifestDataAuthed, verifier, config.cors);
       }
-      return createManifestHandler(manifestData);
+      return createManifestHandler(manifestData, undefined, undefined, config.cors);
     },
 
     httpHandler() {
@@ -169,7 +178,7 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
           ? async (token: string) => { const r = await config.authVerifier!(token, '__manifest__'); return r.valid; }
           : undefined,
       } : undefined;
-      return createMiddleware(manifestData, executeHandler, sessionHandlers, { registry, sessions: sessionStore, getAuth }, manifestOpts);
+      return createMiddleware(manifestData, executeHandler, sessionHandlers, { registry, sessions: sessionStore, getAuth }, manifestOpts, config.cors);
     },
 
     wsHandler(server) {
@@ -252,6 +261,18 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
           eventBus.emitToChannel(event, data, channelId);
         },
       };
+    },
+
+    corsHeaders(requestOrigin: string | undefined | null) {
+      return resolveCorsHeaders(config.cors, requestOrigin);
+    },
+
+    corsPreflightHeaders(requestOrigin: string | undefined | null, methods?: string, allowHeaders?: string) {
+      return resolveCorsPreflightHeaders(config.cors, requestOrigin, methods, allowHeaders);
+    },
+
+    get corsConfig() {
+      return config.cors;
     },
 
     get events() {

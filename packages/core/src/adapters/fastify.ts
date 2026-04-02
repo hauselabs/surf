@@ -7,6 +7,7 @@ import type {
 import { executePipeline } from '../transport/pipeline.js';
 import { createSseWriter, chunkEvent, doneEvent, errorEvent, type SseCompatibleResponse } from '../transport/sse.js';
 import { assertNotPromise } from '../errors.js';
+import { resolveCorsHeaders, resolveCorsPreflightHeaders } from '../cors.js';
 
 // ─── Minimal interfaces for Fastify types (no hard dependency) ─────────
 
@@ -84,11 +85,14 @@ export function fastifyPlugin(surf: SurfInstance) {
     }
   }
 
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
+  function getOrigin(headers: Record<string, string | string[] | undefined>): string | undefined {
+    const val = headers['origin'] ?? headers['Origin'];
+    return Array.isArray(val) ? val[0] : val;
+  }
+
+  function getCorsHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string> {
+    return resolveCorsHeaders(surf.corsConfig, getOrigin(headers));
+  }
 
   return async function surfPlugin(fastify: FastifyInstance) {
     // ─── OPTIONS (CORS preflight) ──────────────────────────────────────
@@ -100,8 +104,8 @@ export function fastifyPlugin(surf: SurfInstance) {
       '/surf/session/end',
     ];
     for (const route of optionsRoutes) {
-      fastify.options(route, async (_req: FastifyRequest, reply: FastifyReply) => {
-        return reply.code(204).headers(corsHeaders).send();
+      fastify.options(route, async (req: FastifyRequest, reply: FastifyReply) => {
+        return reply.code(204).headers(resolveCorsPreflightHeaders(surf.corsConfig, getOrigin(req.headers))).send();
       });
     }
 
@@ -115,12 +119,14 @@ export function fastifyPlugin(surf: SurfInstance) {
         return reply.code(304).send();
       }
 
-      return reply
+      let r = reply
         .header('Content-Type', 'application/json')
         .header('ETag', etag)
-        .header('Cache-Control', 'public, max-age=300')
-        .header('Access-Control-Allow-Origin', '*')
-        .send(manifestData);
+        .header('Cache-Control', 'public, max-age=300');
+      for (const [k, v] of Object.entries(getCorsHeaders(req.headers))) {
+        r = r.header(k, v);
+      }
+      return r.send(manifestData);
     });
 
     // ─── POST /surf/execute ────────────────────────────────────────────
@@ -152,7 +158,7 @@ export function fastifyPlugin(surf: SurfInstance) {
       if (wantsStream) {
         // SSE streaming — write directly to the raw Node response
         const raw = reply.raw;
-        const sse = createSseWriter(raw);
+        const sse = createSseWriter(raw, getCorsHeaders(req.headers));
 
         const context = {
           sessionId: body.sessionId,
@@ -195,7 +201,7 @@ export function fastifyPlugin(surf: SurfInstance) {
 
       const statusCode = response.ok ? 200 : getErrorStatus(response.error.code);
       const headers: Record<string, string> = {
-        'Access-Control-Allow-Origin': '*',
+        ...getCorsHeaders(req.headers),
       };
 
       if (!response.ok && response.error.code === 'RATE_LIMITED') {
@@ -224,9 +230,11 @@ export function fastifyPlugin(surf: SurfInstance) {
           sessions as Parameters<typeof executePipeline>[2],
           auth,
         );
-        return reply
-          .header('Access-Control-Allow-Origin', '*')
-          .send(result);
+        let rr = reply;
+        for (const [k, v] of Object.entries(getCorsHeaders(req.headers))) {
+          rr = rr.header(k, v);
+        }
+        return rr.send(result);
       } catch (e) {
         return reply.code(500).send({
           ok: false,
@@ -236,11 +244,13 @@ export function fastifyPlugin(surf: SurfInstance) {
     });
 
     // ─── POST /surf/session/start ──────────────────────────────────────
-    fastify.post('/surf/session/start', async (_req: FastifyRequest, reply: FastifyReply) => {
+    fastify.post('/surf/session/start', async (req: FastifyRequest, reply: FastifyReply) => {
       const session = await sessions.create();
-      return reply
-        .header('Access-Control-Allow-Origin', '*')
-        .send({ ok: true, sessionId: session.id });
+      let r = reply;
+      for (const [k, v] of Object.entries(getCorsHeaders(req.headers))) {
+        r = r.header(k, v);
+      }
+      return r.send({ ok: true, sessionId: session.id });
     });
 
     // ─── POST /surf/session/end ────────────────────────────────────────
@@ -249,9 +259,11 @@ export function fastifyPlugin(surf: SurfInstance) {
       if (body?.sessionId) {
         await sessions.destroy(body.sessionId);
       }
-      return reply
-        .header('Access-Control-Allow-Origin', '*')
-        .send({ ok: true });
+      let r = reply;
+      for (const [k, v] of Object.entries(getCorsHeaders(req.headers))) {
+        r = r.header(k, v);
+      }
+      return r.send({ ok: true });
     });
   };
 }

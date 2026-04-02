@@ -21,13 +21,16 @@ export interface SseCompatibleResponse {
 /**
  * Initialize an SSE stream on the given response object.
  * Compatible with raw Node.js http, Express, and Fastify.
+ *
+ * @param res - Response object
+ * @param extraHeaders - Additional headers (e.g. CORS headers) to include
  */
-export function createSseWriter(res: SseCompatibleResponse): SseWriter {
+export function createSseWriter(res: SseCompatibleResponse, extraHeaders?: Record<string, string>): SseWriter {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
+    ...extraHeaders,
   });
 
   if (typeof res.flushHeaders === 'function') {

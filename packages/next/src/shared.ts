@@ -45,6 +45,7 @@ export function extractIp(
 
 /**
  * CORS headers applied to all Surf responses.
+ * @deprecated Use `resolveCorsHeaders()` from the SurfInstance for configurable CORS.
  */
 export const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',

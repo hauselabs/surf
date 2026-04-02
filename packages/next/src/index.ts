@@ -10,7 +10,6 @@ import {
   extractAuth,
   extractIp,
   extractSessionId,
-  CORS_HEADERS,
 } from './shared.js';
 
 /**
@@ -77,12 +76,16 @@ export function createSurfRouteHandler(
     return stripped || '/';
   }
 
-  function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
+  function corsHeaders(request: Request): Record<string, string> {
+    return surf.corsHeaders(request.headers.get('origin'));
+  }
+
+  function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>, request?: Request): Response {
     return new Response(JSON.stringify(body), {
       status,
       headers: {
         'Content-Type': 'application/json',
-        ...CORS_HEADERS,
+        ...(request ? corsHeaders(request) : { 'Access-Control-Allow-Origin': '*' }),
         ...extraHeaders,
       },
     });
@@ -111,19 +114,21 @@ export function createSurfRouteHandler(
       if (request.headers.get('if-none-match') === etag) {
         return new Response(null, {
           status: 304,
-          headers: { 'ETag': etag, 'Cache-Control': 'public, max-age=300', ...CORS_HEADERS },
+          headers: { 'ETag': etag, 'Cache-Control': 'public, max-age=300', ...corsHeaders(request) },
         });
       }
 
       return jsonResponse(manifestData, 200, {
         'ETag': etag,
         'Cache-Control': 'public, max-age=300',
-      });
+      }, request);
     }
 
     return jsonResponse(
       { ok: false, error: { code: 'NOT_FOUND', message: `Unknown route: GET ${route}` } },
       404,
+      undefined,
+      request,
     );
   }
 
@@ -149,6 +154,8 @@ export function createSurfRouteHandler(
         return jsonResponse(
           { ok: false, error: { code: 'INVALID_PARAMS', message: 'Invalid JSON body' } },
           400,
+          undefined,
+          request,
         );
       }
 
@@ -156,6 +163,8 @@ export function createSurfRouteHandler(
         return jsonResponse(
           { ok: false, error: { code: 'INVALID_PARAMS', message: 'Missing command field' } },
           400,
+          undefined,
+          request,
         );
       }
 
@@ -215,7 +224,7 @@ export function createSurfRouteHandler(
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
-            ...CORS_HEADERS,
+            ...corsHeaders(request),
           },
         });
       }
@@ -241,7 +250,7 @@ export function createSurfRouteHandler(
         headers['Retry-After'] = String(Math.ceil(retryMs / 1000));
       }
 
-      return jsonResponse(response, statusCode, headers);
+      return jsonResponse(response, statusCode, headers, request);
     }
 
     // ─── POST /surf/pipeline ─────────────────────────────────────────
@@ -253,6 +262,8 @@ export function createSurfRouteHandler(
         return jsonResponse(
           { ok: false, error: { code: 'INVALID_PARAMS', message: 'Invalid JSON body' } },
           400,
+          undefined,
+          request,
         );
       }
 
@@ -263,7 +274,7 @@ export function createSurfRouteHandler(
           sessions as Parameters<typeof executePipeline>[2],
           auth,
         );
-        return jsonResponse(result, 200);
+        return jsonResponse(result, 200, undefined, request);
       } catch (e) {
         return jsonResponse(
           {
@@ -271,6 +282,8 @@ export function createSurfRouteHandler(
             error: { code: 'INTERNAL_ERROR', message: e instanceof Error ? e.message : 'Unknown error' },
           },
           500,
+          undefined,
+          request,
         );
       }
     }
@@ -278,7 +291,7 @@ export function createSurfRouteHandler(
     // ─── POST /surf/session/start ────────────────────────────────────
     if (route === '/surf/session/start' || route === '/session/start') {
       const session = await sessions.create();
-      return jsonResponse({ ok: true, sessionId: session.id }, 200);
+      return jsonResponse({ ok: true, sessionId: session.id }, 200, undefined, request);
     }
 
     // ─── POST /surf/session/end ──────────────────────────────────────
@@ -292,12 +305,14 @@ export function createSurfRouteHandler(
       } catch {
         // Ignore parse errors for session end
       }
-      return jsonResponse({ ok: true }, 200);
+      return jsonResponse({ ok: true }, 200, undefined, request);
     }
 
     return jsonResponse(
       { ok: false, error: { code: 'NOT_FOUND', message: `Unknown route: POST ${route}` } },
       404,
+      undefined,
+      request,
     );
   }
 
