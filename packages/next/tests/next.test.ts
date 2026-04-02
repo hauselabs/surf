@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSurf } from '@surfjs/core';
+import { createSurf, bearerVerifier } from '@surfjs/core';
 import type { SurfInstance } from '@surfjs/core';
 import { createSurfRouteHandler } from '../src/index.js';
 import { createSurfApiHandler } from '../src/pages.js';
@@ -43,6 +43,24 @@ async function createTestSurf(): Promise<SurfInstance> {
           }
           return 'stream-done';
         },
+      },
+    },
+  });
+}
+
+async function createTestSurfWithAuth(): Promise<SurfInstance> {
+  return await createSurf({
+    name: 'AuthApp',
+    authVerifier: bearerVerifier(['valid-token']),
+    commands: {
+      publicCmd: {
+        description: 'A public command',
+        run: async () => 'public',
+      },
+      hiddenCmd: {
+        description: 'A hidden command requiring auth',
+        auth: 'hidden',
+        run: async () => 'hidden',
       },
     },
   });
@@ -295,6 +313,46 @@ describe('App Router — createSurfRouteHandler', () => {
       const body = await res.json();
       expect(body.ok).toBe(false);
       expect(body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('excludes hidden commands from manifest without auth', async () => {
+      const authSurf = await createTestSurfWithAuth();
+      const handler = createSurfRouteHandler(authSurf);
+      const req = makeRequest('http://localhost/api/surf');
+      const res = await handler.GET(req, makeContext(undefined));
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.commands).toHaveProperty('publicCmd');
+      expect(body.commands).not.toHaveProperty('hiddenCmd');
+    });
+
+    it('includes hidden commands in manifest with valid auth token', async () => {
+      const authSurf = await createTestSurfWithAuth();
+      const handler = createSurfRouteHandler(authSurf);
+      const req = makeRequest('http://localhost/api/surf', {
+        headers: { 'Authorization': 'Bearer valid-token' },
+      });
+      const res = await handler.GET(req, makeContext(undefined));
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.commands).toHaveProperty('publicCmd');
+      expect(body.commands).toHaveProperty('hiddenCmd');
+    });
+
+    it('excludes hidden commands from manifest with invalid auth token', async () => {
+      const authSurf = await createTestSurfWithAuth();
+      const handler = createSurfRouteHandler(authSurf);
+      const req = makeRequest('http://localhost/api/surf', {
+        headers: { 'Authorization': 'Bearer wrong-token' },
+      });
+      const res = await handler.GET(req, makeContext(undefined));
+
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.commands).toHaveProperty('publicCmd');
+      expect(body.commands).not.toHaveProperty('hiddenCmd');
     });
   });
 
@@ -586,6 +644,54 @@ describe('Pages Router — createSurfApiHandler', () => {
       expect(res._headers['Access-Control-Allow-Origin']).toBe('*');
       expect(res._headers['Cache-Control']).toBe('public, max-age=300');
       expect(res._headers['ETag']).toBeTruthy();
+    });
+
+    it('excludes hidden commands from manifest without auth', async () => {
+      const authSurf = await createTestSurfWithAuth();
+      const authHandler = createSurfApiHandler(authSurf);
+      const res = createMockPagesRes();
+      await authHandler(
+        { method: 'GET', url: '/api/surf', headers: {}, query: {}, body: undefined },
+        res,
+      );
+
+      expect(res._statusCode).toBe(200);
+      const body = res._body as Record<string, unknown>;
+      const commands = body['commands'] as Record<string, unknown>;
+      expect(commands).toHaveProperty('publicCmd');
+      expect(commands).not.toHaveProperty('hiddenCmd');
+    });
+
+    it('includes hidden commands in manifest with valid auth token', async () => {
+      const authSurf = await createTestSurfWithAuth();
+      const authHandler = createSurfApiHandler(authSurf);
+      const res = createMockPagesRes();
+      await authHandler(
+        { method: 'GET', url: '/api/surf', headers: { 'authorization': 'Bearer valid-token' }, query: {}, body: undefined },
+        res,
+      );
+
+      expect(res._statusCode).toBe(200);
+      const body = res._body as Record<string, unknown>;
+      const commands = body['commands'] as Record<string, unknown>;
+      expect(commands).toHaveProperty('publicCmd');
+      expect(commands).toHaveProperty('hiddenCmd');
+    });
+
+    it('excludes hidden commands from manifest with invalid auth token', async () => {
+      const authSurf = await createTestSurfWithAuth();
+      const authHandler = createSurfApiHandler(authSurf);
+      const res = createMockPagesRes();
+      await authHandler(
+        { method: 'GET', url: '/api/surf', headers: { 'authorization': 'Bearer wrong-token' }, query: {}, body: undefined },
+        res,
+      );
+
+      expect(res._statusCode).toBe(200);
+      const body = res._body as Record<string, unknown>;
+      const commands = body['commands'] as Record<string, unknown>;
+      expect(commands).toHaveProperty('publicCmd');
+      expect(commands).not.toHaveProperty('hiddenCmd');
     });
   });
 

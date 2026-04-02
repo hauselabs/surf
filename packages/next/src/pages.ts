@@ -102,7 +102,8 @@ export function createSurfApiHandler(
 
     // ─── GET /.well-known/surf.json ──────────────────────────────────
     if (method === 'GET' && (route === '/.well-known/surf.json' || route === '/')) {
-      const manifestData = surf.manifest();
+      const authToken = extractAuth(headerValue(req.headers['authorization']));
+      const manifestData = await surf.manifestForToken(authToken);
       const etag = `"${manifestData.checksum}"`;
 
       if (headerValue(req.headers['if-none-match']) === etag) {

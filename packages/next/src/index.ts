@@ -98,7 +98,8 @@ export function createSurfRouteHandler(
 
     // /.well-known/surf.json
     if (route === '/.well-known/surf.json' || route === '/') {
-      const manifestData = surf.manifest();
+      const auth = extractAuth(request.headers.get('authorization'));
+      const manifestData = await surf.manifestForToken(auth);
       if (!manifestData) {
         return new Response(
           JSON.stringify({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Surf not initialized' } }),
