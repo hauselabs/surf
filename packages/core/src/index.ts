@@ -107,7 +107,7 @@ export { runMiddlewarePipeline } from './middleware.js';
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export type { AuthVerifier, AuthResult } from './auth.js';
-export { bearerVerifier, scopedVerifier, createAuthMiddleware } from './auth.js';
+export { bearerVerifier, scopedVerifier, createAuthMiddleware, timingSafeEqual } from './auth.js';
 
 // ─── Namespacing ──────────────────────────────────────────────────────────────
 

@@ -13,27 +13,36 @@ export type AuthVerifier = (token: string, command: string) => Promise<AuthResul
 
 /**
  * Timing-safe comparison of two strings using Web Crypto API.
- * Falls back to simple comparison if crypto.subtle is unavailable.
+ * Both values are hashed to fixed-length SHA-256 digests before comparison,
+ * preventing length leakage through timing side-channels.
+ * Falls back to a constant-time XOR comparison on padded buffers
+ * if crypto.subtle is unavailable.
  */
-async function timingSafeEqual(a: string, b: string): Promise<boolean> {
-  if (a.length !== b.length) return false;
+export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+
   try {
-    const encoder = new TextEncoder();
-    const bufA = encoder.encode(a);
-    const bufB = encoder.encode(b);
-    // Import as HMAC key and sign to get constant-time comparison
-    const key = await crypto.subtle.importKey(
-      'raw', bufA, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-    );
-    const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, bufB));
-    const expected = new Uint8Array(await crypto.subtle.sign('HMAC', key, bufA));
-    if (sig.length !== expected.length) return false;
+    // Hash both values to fixed-length digests — no length leakage
+    const [hashA, hashB] = await Promise.all([
+      crypto.subtle.digest('SHA-256', bufA),
+      crypto.subtle.digest('SHA-256', bufB),
+    ]);
+    const viewA = new Uint8Array(hashA);
+    const viewB = new Uint8Array(hashB);
+    // Constant-time comparison of the 32-byte digests
     let result = 0;
-    for (let i = 0; i < sig.length; i++) result |= sig[i]! ^ expected[i]!;
+    for (let i = 0; i < viewA.length; i++) result |= viewA[i]! ^ viewB[i]!;
     return result === 0;
   } catch {
-    // Fallback for environments without crypto.subtle
-    return a === b;
+    // Fallback: constant-time comparison on padded buffers
+    const maxLen = Math.max(bufA.length, bufB.length, 1);
+    let result = bufA.length ^ bufB.length; // length difference contributes to result, not timing
+    for (let i = 0; i < maxLen; i++) {
+      result |= (bufA[i] ?? 0) ^ (bufB[i] ?? 0);
+    }
+    return result === 0;
   }
 }
 

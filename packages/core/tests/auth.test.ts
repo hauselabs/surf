@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSurf } from '../src/surf.js';
 import type { AuthVerifier } from '../src/auth.js';
+import { timingSafeEqual } from '../src/auth.js';
 
 describe('Auth', () => {
   const verifier: AuthVerifier = async (token, _command) => {
@@ -103,6 +104,64 @@ describe('Auth', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.result).toEqual({ hasClaims: true });
+    }
+  });
+});
+
+describe('timingSafeEqual', () => {
+  it('returns true for identical strings', async () => {
+    expect(await timingSafeEqual('hello', 'hello')).toBe(true);
+  });
+
+  it('returns false for different strings of same length', async () => {
+    expect(await timingSafeEqual('hello', 'world')).toBe(false);
+  });
+
+  it('returns false for strings of different lengths', async () => {
+    expect(await timingSafeEqual('short', 'muchlongerstring')).toBe(false);
+    expect(await timingSafeEqual('muchlongerstring', 'short')).toBe(false);
+  });
+
+  it('returns true for empty strings', async () => {
+    expect(await timingSafeEqual('', '')).toBe(true);
+  });
+
+  it('returns false when one string is empty', async () => {
+    expect(await timingSafeEqual('', 'notempty')).toBe(false);
+    expect(await timingSafeEqual('notempty', '')).toBe(false);
+  });
+
+  it('handles unicode strings correctly', async () => {
+    expect(await timingSafeEqual('héllo', 'héllo')).toBe(true);
+    expect(await timingSafeEqual('héllo', 'hëllo')).toBe(false);
+  });
+
+  it('handles token-like strings', async () => {
+    const tokenA = 'sk-abc123def456ghi789jkl012mno345';
+    const tokenB = 'sk-abc123def456ghi789jkl012mno345';
+    const tokenC = 'sk-abc123def456ghi789jkl012mno346';
+    expect(await timingSafeEqual(tokenA, tokenB)).toBe(true);
+    expect(await timingSafeEqual(tokenA, tokenC)).toBe(false);
+  });
+
+  it('works with fallback when crypto.subtle is unavailable', async () => {
+    const originalSubtle = globalThis.crypto?.subtle;
+    try {
+      // Temporarily remove crypto.subtle to trigger fallback
+      Object.defineProperty(globalThis.crypto, 'subtle', {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      expect(await timingSafeEqual('test', 'test')).toBe(true);
+      expect(await timingSafeEqual('test', 'nope')).toBe(false);
+      expect(await timingSafeEqual('short', 'longervalue')).toBe(false);
+    } finally {
+      Object.defineProperty(globalThis.crypto, 'subtle', {
+        value: originalSubtle,
+        configurable: true,
+        writable: true,
+      });
     }
   });
 });
