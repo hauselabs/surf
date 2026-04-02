@@ -336,6 +336,69 @@ export function createMiddleware(
   };
 }
 
+/**
+ * Validates the pipeline request body structure.
+ * Returns an error message string if invalid, or null if valid.
+ */
+function validatePipelineBody(body: unknown): string | null {
+  if (body === null || body === undefined || typeof body !== 'object') {
+    return 'Pipeline request body must be a JSON object';
+  }
+
+  const obj = body as Record<string, unknown>;
+
+  if (!('steps' in obj)) {
+    return 'Missing required "steps" array';
+  }
+
+  if (!Array.isArray(obj.steps)) {
+    return '"steps" must be an array';
+  }
+
+  for (let i = 0; i < obj.steps.length; i++) {
+    const step = obj.steps[i] as unknown;
+    if (step === null || step === undefined || typeof step !== 'object') {
+      return `steps[${i}] must be an object`;
+    }
+
+    const stepObj = step as Record<string, unknown>;
+
+    if (!('command' in stepObj) || typeof stepObj.command !== 'string') {
+      return `steps[${i}] must have a "command" string`;
+    }
+
+    if (stepObj.command.trim() === '') {
+      return `steps[${i}].command must not be empty`;
+    }
+
+    if ('params' in stepObj && stepObj.params !== undefined) {
+      if (stepObj.params === null || typeof stepObj.params !== 'object' || Array.isArray(stepObj.params)) {
+        return `steps[${i}].params must be an object`;
+      }
+    }
+
+    if ('as' in stepObj && stepObj.as !== undefined) {
+      if (typeof stepObj.as !== 'string') {
+        return `steps[${i}].as must be a string`;
+      }
+    }
+  }
+
+  if ('sessionId' in obj && obj.sessionId !== undefined) {
+    if (typeof obj.sessionId !== 'string') {
+      return '"sessionId" must be a string';
+    }
+  }
+
+  if ('continueOnError' in obj && obj.continueOnError !== undefined) {
+    if (typeof obj.continueOnError !== 'boolean') {
+      return '"continueOnError" must be a boolean';
+    }
+  }
+
+  return null;
+}
+
 async function handlePipeline(
   req: Parameters<HttpHandler>[0],
   res: Parameters<HttpHandler>[1],
@@ -357,6 +420,14 @@ async function handlePipeline(
   } catch {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: false, error: { code: 'INVALID_PARAMS', message: 'Invalid JSON body' } }));
+    return;
+  }
+
+  // Validate pipeline request body structure
+  const validationError = validatePipelineBody(body);
+  if (validationError) {
+    res.writeHead(400, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ ok: false, error: { code: 'INVALID_PARAMS', message: validationError } }));
     return;
   }
 
