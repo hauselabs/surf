@@ -193,18 +193,18 @@ export function attachWebSocket(
               break;
             }
 
-            // Channel auth check — fail-closed: auth always required unless channelAuth explicitly returns true
-            if (!authToken) {
-              const errMsg: WsOutgoingMessage = {
-                type: 'result',
-                id: 'subscribe',
-                ok: false,
-                error: { code: 'AUTH_REQUIRED', message: 'Auth token required for channel subscription' },
-              };
-              ws.send(JSON.stringify(errMsg));
-              continue;
-            }
+            // Channel auth check — only require auth when channelAuth is configured
             if (live?.channelAuth) {
+              if (!authToken) {
+                const errMsg: WsOutgoingMessage = {
+                  type: 'result',
+                  id: 'subscribe',
+                  ok: false,
+                  error: { code: 'AUTH_REQUIRED', message: 'Auth token required for channel subscription' },
+                };
+                ws.send(JSON.stringify(errMsg));
+                continue;
+              }
               try {
                 const allowed = await live.channelAuth(authToken, channelId);
                 if (!allowed) continue;
