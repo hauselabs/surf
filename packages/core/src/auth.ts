@@ -46,11 +46,36 @@ export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   }
 }
 
+/**
+ * Compute a short fingerprint (first 16 hex chars of SHA-256) for a token.
+ * Used to identify tokens in claims without exposing the raw credential.
+ */
+async function tokenFingerprint(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  try {
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    const bytes = new Uint8Array(hash);
+    let hex = '';
+    for (let i = 0; i < 8; i++) hex += bytes[i]!.toString(16).padStart(2, '0');
+    return hex;
+  } catch {
+    // Fallback: simple hash for environments without crypto.subtle
+    let h = 0x811c9dc5;
+    for (let i = 0; i < data.length; i++) {
+      h ^= data[i]!;
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+}
+
 export function bearerVerifier(validTokens: string[]): AuthVerifier {
   return async (token: string): Promise<AuthResult> => {
     for (const valid of validTokens) {
       if (await timingSafeEqual(token, valid)) {
-        return { valid: true, claims: { token } };
+        const fingerprint = await tokenFingerprint(token);
+        return { valid: true, claims: { sub: 'bearer', tokenId: fingerprint } };
       }
     }
     return { valid: false, reason: 'Invalid token' };
@@ -84,7 +109,8 @@ export function scopedVerifier(
   return async (token: string): Promise<AuthResult> => {
     const scopes = tokenScopes[token];
     if (scopes !== undefined) {
-      return { valid: true, scopes, claims: { token } };
+      const fingerprint = await tokenFingerprint(token);
+      return { valid: true, scopes, claims: { sub: 'bearer', tokenId: fingerprint } };
     }
     return { valid: false, reason: 'Invalid token' };
   };

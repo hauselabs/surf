@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSurf } from '../src/surf.js';
 import type { AuthVerifier } from '../src/auth.js';
-import { timingSafeEqual } from '../src/auth.js';
+import { timingSafeEqual, bearerVerifier, scopedVerifier } from '../src/auth.js';
 
 describe('Auth', () => {
   const verifier: AuthVerifier = async (token, _command) => {
@@ -105,6 +105,61 @@ describe('Auth', () => {
     if (result.ok) {
       expect(result.result).toEqual({ hasClaims: true });
     }
+  });
+});
+
+describe('bearerVerifier — no raw token in claims', () => {
+  const TOKEN = 'sk-secret-test-token-12345';
+
+  it('returns claims without raw token on valid auth', async () => {
+    const verifier = bearerVerifier([TOKEN]);
+    const result = await verifier(TOKEN, 'test');
+    expect(result.valid).toBe(true);
+    expect(result.claims).toBeDefined();
+    expect(result.claims).not.toHaveProperty('token');
+    expect(result.claims!.sub).toBe('bearer');
+    expect(result.claims!.tokenId).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('returns consistent tokenId for the same token', async () => {
+    const verifier = bearerVerifier([TOKEN]);
+    const r1 = await verifier(TOKEN, 'a');
+    const r2 = await verifier(TOKEN, 'b');
+    expect(r1.claims!.tokenId).toBe(r2.claims!.tokenId);
+  });
+
+  it('returns different tokenId for different tokens', async () => {
+    const token2 = 'sk-other-token-67890';
+    const verifier = bearerVerifier([TOKEN, token2]);
+    const r1 = await verifier(TOKEN, 'cmd');
+    const r2 = await verifier(token2, 'cmd');
+    expect(r1.claims!.tokenId).not.toBe(r2.claims!.tokenId);
+  });
+
+  it('rejects invalid tokens', async () => {
+    const verifier = bearerVerifier([TOKEN]);
+    const result = await verifier('bad-token', 'cmd');
+    expect(result.valid).toBe(false);
+  });
+});
+
+describe('scopedVerifier — no raw token in claims', () => {
+  const TOKEN = 'sk-scoped-token-abc';
+
+  it('returns claims without raw token on valid auth', async () => {
+    const verifier = scopedVerifier({ [TOKEN]: ['read', 'write'] });
+    const result = await verifier(TOKEN, 'test');
+    expect(result.valid).toBe(true);
+    expect(result.claims).not.toHaveProperty('token');
+    expect(result.claims!.sub).toBe('bearer');
+    expect(result.claims!.tokenId).toMatch(/^[0-9a-f]{16}$/);
+    expect(result.scopes).toEqual(['read', 'write']);
+  });
+
+  it('rejects unknown tokens', async () => {
+    const verifier = scopedVerifier({ [TOKEN]: ['read'] });
+    const result = await verifier('unknown', 'cmd');
+    expect(result.valid).toBe(false);
   });
 });
 
