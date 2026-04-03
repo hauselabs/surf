@@ -23,10 +23,13 @@ export async function POST(request: NextRequest) {
 function getErrorStatus(code: string): number {
   switch (code) {
     case 'UNKNOWN_COMMAND': return 404;
+    case 'NOT_FOUND': return 404;
     case 'INVALID_PARAMS': return 400;
     case 'AUTH_REQUIRED': return 401;
     case 'AUTH_FAILED': return 403;
+    case 'SESSION_EXPIRED': return 410;
     case 'RATE_LIMITED': return 429;
+    case 'NOT_SUPPORTED': return 501;
     default: return 500;
   }
 }

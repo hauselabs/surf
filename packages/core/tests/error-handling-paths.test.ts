@@ -778,7 +778,7 @@ describe('SurfError – serialization roundtrip', () => {
     const res = mockRes();
     await handler(mockReq('POST', '/surf/execute', { command: 'bad' }), res);
 
-    expect(res.statusCode).toBe(500); // NOT_FOUND from handler → wraps in execute path (code is preserved)
+    expect(res.statusCode).toBe(404); // NOT_FOUND from handler → maps to HTTP 404
     const body = res.json<{ ok: boolean; error: { code: string; message: string; details?: Record<string, unknown> } }>();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe('NOT_FOUND');

@@ -135,6 +135,10 @@ describe('shared utilities', () => {
       expect(getErrorStatus('UNKNOWN_COMMAND')).toBe(404);
     });
 
+    it('maps NOT_FOUND to 404', () => {
+      expect(getErrorStatus('NOT_FOUND')).toBe(404);
+    });
+
     it('maps INVALID_PARAMS to 400', () => {
       expect(getErrorStatus('INVALID_PARAMS')).toBe(400);
     });
