@@ -52,7 +52,9 @@ Allow: /.well-known/surf.json
   "surf": "0.1.0",
   "name": "Service Name",
   "description": "Optional description",
+  "about": "Longer context about the site for agents — what it does, content types, editorial tone",
   "version": "1.0.0",
+  "baseUrl": "https://example.com",
   "auth": {
     "type": "bearer | apiKey | oauth2 | none"
   },
@@ -86,7 +88,16 @@ Allow: /.well-known/surf.json
         "windowMs": 60000,
         "maxRequests": 100,
         "keyBy": "ip | session | auth | global"
-      }
+      },
+      "requiredScopes": ["read:products", "write:cart"],
+      "paginated": true,
+      "examples": [
+        {
+          "title": "Search for shoes",
+          "params": { "query": "shoes" },
+          "result": { "items": [] }
+        }
+      ]
     }
   },
   "events": {
@@ -103,6 +114,12 @@ Allow: /.well-known/surf.json
       "properties": {}
     }
   },
+  "channels": {
+    "channelName": {
+      "description": "Channel description",
+      "stateSchema": {}
+    }
+  },
   "checksum": "sha256-hash",
   "updatedAt": "ISO-8601"
 }
@@ -113,6 +130,19 @@ Allow: /.well-known/surf.json
 - `surf` — Protocol version (semver)
 - `name` — Human-readable service name
 - `commands` — At least one command definition
+- `checksum` — Deterministic SHA-256 hash of the commands schema (see §2.7)
+- `updatedAt` — ISO-8601 timestamp of when the manifest was generated
+
+### 2.1.1 Optional Top-Level Fields
+
+- `description` — Short human-readable description of the service
+- `about` — Longer context about the site for agents — what it does, content types, editorial tone. Helps agents understand the service's purpose without inspecting individual commands
+- `version` — Application version (semver)
+- `baseUrl` — Base URL for the service (used by clients for relative URL resolution)
+- `auth` — Authentication configuration (see §4)
+- `events` — Event definitions for real-time subscriptions
+- `types` — Reusable type definitions referenced via `$ref`
+- `channels` — Real-time channels available for Surf Live subscription (see §9)
 
 ### 2.2 Command Names
 
@@ -146,6 +176,75 @@ Hints are advisory metadata for agent optimization:
 | `idempotent` | `boolean` | Safe to retry with same params |
 | `sideEffects` | `boolean` | Whether command modifies state |
 | `estimatedMs` | `number` | Expected execution time in ms |
+
+### 2.6 Required Scopes
+
+Commands MAY declare `requiredScopes` — an array of scope strings that the auth token MUST include for access:
+
+```json
+{
+  "commands": {
+    "cart.checkout": {
+      "description": "Complete the checkout process",
+      "auth": "required",
+      "requiredScopes": ["write:orders", "read:cart"],
+      "params": { ... }
+    }
+  }
+}
+```
+
+When `requiredScopes` is set and the request includes a valid auth token, the server checks that the token's scopes are a superset of the required scopes. If any scope is missing, the server returns `AUTH_FAILED` (403) with a message indicating which scopes are missing.
+
+`requiredScopes` is only checked when:
+- `auth` is `"required"`, or
+- `auth` is `"optional"` and a token is provided
+
+### 2.7 Checksum
+
+The manifest includes a `checksum` field — a deterministic SHA-256 hash of the `commands` object. This allows agents to efficiently detect when the API surface has changed without diffing the full manifest.
+
+The checksum is computed by:
+1. Sorting command keys alphabetically
+2. JSON-serializing the sorted commands object
+3. Computing SHA-256 of the UTF-8 encoded string
+4. Encoding as lowercase hexadecimal
+
+When `auth: "hidden"` commands exist, the checksum changes depending on authentication state (see §4.4).
+
+### 2.8 Examples
+
+Commands MAY include an `examples` array of request/response pairs. Examples dramatically improve agent accuracy by showing concrete usage:
+
+```json
+{
+  "commands": {
+    "search": {
+      "description": "Search the product catalog",
+      "examples": [
+        {
+          "title": "Search for shoes",
+          "params": { "query": "shoes", "limit": 10 },
+          "result": { "items": [{ "name": "Running Shoe", "price": 99.99 }], "total": 42 }
+        },
+        {
+          "title": "Filter by category",
+          "params": { "query": "jacket", "category": "outerwear" },
+          "result": { "items": [{ "name": "Rain Jacket", "price": 149.99 }], "total": 7 }
+        }
+      ]
+    }
+  }
+}
+```
+
+Each example has:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | `string` | No | Human-readable label for this example |
+| `params` | `object` | Yes | Example request parameters |
+| `result` | `any` | No | Expected response result |
 
 ---
 
@@ -500,6 +599,12 @@ Channels are opt-in — Surf Live must be explicitly enabled in the server confi
 const surf = createSurf({
   name: 'My App',
   commands: { /* ... */ },
+  channels: {
+    'project-updates': {
+      description: 'Real-time project state changes',
+      stateSchema: { type: 'object', properties: { status: { type: 'string' } } },
+    },
+  },
   live: {
     enabled: true,
     maxChannelsPerConnection: 10,
@@ -509,6 +614,30 @@ const surf = createSurf({
   },
 });
 ```
+
+#### Channels in the Manifest
+
+When channels are defined, they appear in the manifest under the top-level `channels` field (see §2):
+
+```json
+{
+  "channels": {
+    "project-updates": {
+      "description": "Real-time project state changes",
+      "stateSchema": { "type": "object", "properties": { "status": { "type": "string" } } }
+    }
+  }
+}
+```
+
+Each channel entry includes:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `description` | `string` | Yes | Human-readable description of the channel |
+| `stateSchema` | `object` | No | JSON Schema describing the channel's state structure |
+
+This allows agents to discover available channels and understand their state shapes before subscribing.
 
 ### 9.2 WebSocket Subscribe/Unsubscribe
 
