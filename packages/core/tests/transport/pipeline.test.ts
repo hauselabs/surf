@@ -28,6 +28,16 @@ describe('Pipeline', () => {
         params: { value: { type: 'string' } },
         run: async (p) => p.value,
       },
+      sum: {
+        description: 'Sum an array of numbers',
+        params: { numbers: { type: 'array', required: true } },
+        run: async (p) => (p.numbers as number[]).reduce((a: number, b: number) => a + b, 0),
+      },
+      collect: {
+        description: 'Return params as-is',
+        params: { items: { type: 'array' }, nested: { type: 'object' } },
+        run: async (p) => p,
+      },
     });
   }
 
@@ -129,5 +139,103 @@ describe('Pipeline', () => {
 
     expect(result.ok).toBe(true);
     expect(result.results).toHaveLength(0);
+  });
+
+  it('passes array param values through correctly', async () => {
+    const registry = createRegistry();
+    const sessions = new InMemorySessionStore();
+
+    const result = await executePipeline(
+      {
+        steps: [
+          { command: 'sum', params: { numbers: [1, 2, 3, 4] } },
+        ],
+      },
+      registry,
+      sessions,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.results[0].result).toBe(10);
+  });
+
+  it('resolves $alias references inside array param values', async () => {
+    const registry = createRegistry();
+    const sessions = new InMemorySessionStore();
+
+    const result = await executePipeline(
+      {
+        steps: [
+          { command: 'add', params: { a: 10, b: 20 }, as: 'first' },
+          { command: 'add', params: { a: 30, b: 40 }, as: 'second' },
+          { command: 'sum', params: { numbers: ['$first', '$second', 5] } },
+        ],
+      },
+      registry,
+      sessions,
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.results[2].result).toBe(105); // 30 + 70 + 5
+  });
+
+  it('resolves $alias references in nested arrays', async () => {
+    const registry = createRegistry();
+    const sessions = new InMemorySessionStore();
+
+    const result = await executePipeline(
+      {
+        steps: [
+          { command: 'echo', params: { value: 'hello' }, as: 'msg' },
+          { command: 'collect', params: { items: ['$msg', 'world'] } },
+        ],
+      },
+      registry,
+      sessions,
+    );
+
+    expect(result.ok).toBe(true);
+    const params = result.results[1].result as Record<string, unknown>;
+    expect(params.items).toEqual(['hello', 'world']);
+  });
+
+  it('resolves $alias references in arrays inside nested objects', async () => {
+    const registry = createRegistry();
+    const sessions = new InMemorySessionStore();
+
+    const result = await executePipeline(
+      {
+        steps: [
+          { command: 'add', params: { a: 5, b: 5 }, as: 'ten' },
+          { command: 'collect', params: { nested: { values: ['$ten', 20] } } },
+        ],
+      },
+      registry,
+      sessions,
+    );
+
+    expect(result.ok).toBe(true);
+    const params = result.results[1].result as Record<string, unknown>;
+    expect(params.nested).toEqual({ values: [10, 20] });
+  });
+
+  it('handles arrays of objects with $alias references', async () => {
+    const registry = createRegistry();
+    const sessions = new InMemorySessionStore();
+
+    const result = await executePipeline(
+      {
+        steps: [
+          { command: 'echo', params: { value: 'resolved' }, as: 'val' },
+          { command: 'collect', params: { items: [{ key: '$val' }, { key: 'literal' }] } },
+        ],
+      },
+      registry,
+      sessions,
+    );
+
+    expect(result.ok).toBe(true);
+    const params = result.results[1].result as Record<string, unknown>;
+    expect(params.items).toEqual([{ key: 'resolved' }, { key: 'literal' }]);
   });
 });

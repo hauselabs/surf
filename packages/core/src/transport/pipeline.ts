@@ -10,6 +10,19 @@ import type { InMemorySessionStore } from '../session.js';
 /**
  * Resolve `$alias` references in parameter values.
  */
+function resolveValue(value: unknown, aliases: Map<string, unknown>): unknown {
+  if (typeof value === 'string' && value.startsWith('$')) {
+    return resolveAlias(value, aliases);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => resolveValue(item, aliases));
+  }
+  if (typeof value === 'object' && value !== null) {
+    return resolveParams(value as Record<string, unknown>, aliases);
+  }
+  return value;
+}
+
 function resolveParams(
   params: Record<string, unknown>,
   aliases: Map<string, unknown>,
@@ -17,13 +30,7 @@ function resolveParams(
   const resolved: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(params)) {
-    if (typeof value === 'string' && value.startsWith('$')) {
-      resolved[key] = resolveAlias(value, aliases);
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      resolved[key] = resolveParams(value as Record<string, unknown>, aliases);
-    } else {
-      resolved[key] = value;
-    }
+    resolved[key] = resolveValue(value, aliases);
   }
 
   return resolved;
