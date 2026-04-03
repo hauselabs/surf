@@ -98,4 +98,27 @@ describe('RateLimiter', () => {
     expect(RateLimiter.buildKey('cmd', { ...config, keyBy: 'auth' }, ctx)).toBe('cmd:auth:tok1');
     expect(RateLimiter.buildKey('cmd', { ...config, keyBy: 'global' }, ctx)).toBe('cmd:global');
   });
+
+  it('buildKey defaults to ip when keyBy is omitted', () => {
+    const config = { windowMs: 1000, maxRequests: 5 };
+    const ctx = { ip: '1.2.3.4', sessionId: 'sess1', auth: 'tok1' };
+
+    // No keyBy specified — should default to 'ip'
+    expect(RateLimiter.buildKey('cmd', config, ctx)).toBe('cmd:ip:1.2.3.4');
+  });
+
+  it('per-IP rate limits isolate different IPs', () => {
+    const limiter = new RateLimiter();
+    const config = { windowMs: 10000, maxRequests: 1 };
+
+    // IP-based keys (default keyBy)
+    const key1 = RateLimiter.buildKey('cmd', config, { ip: '1.1.1.1' });
+    const key2 = RateLimiter.buildKey('cmd', config, { ip: '2.2.2.2' });
+
+    limiter.check(config, key1);
+    // Same IP should be blocked
+    expect(() => limiter.check(config, key1)).toThrow();
+    // Different IP should still work
+    expect(() => limiter.check(config, key2)).not.toThrow();
+  });
 });

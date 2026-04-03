@@ -67,7 +67,7 @@ export class RateLimiter {
     config: RateLimitConfig,
     ctx: { ip?: string; sessionId?: string; auth?: string },
   ): string {
-    const keyBy = config.keyBy ?? 'global';
+    const keyBy = config.keyBy ?? 'ip';
     switch (keyBy) {
       case 'ip':
         return `${command}:ip:${ctx.ip ?? 'unknown'}`;
