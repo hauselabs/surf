@@ -31,10 +31,29 @@ interface WebSocketLike {
 
 const WS_OPEN = 1;
 
-/** Connection state for the WebSocket transport. */
+/**
+ * Connection state for the WebSocket transport.
+ *
+ * Transitions: `disconnected` → `connecting` → `connected` ↔ `reconnecting` → `disconnected`.
+ */
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
 
-/** Options for configuring reconnection and health monitoring. */
+/**
+ * Options for configuring WebSocket reconnection and health monitoring.
+ *
+ * @example
+ * ```ts
+ * const ws = new WebSocketTransport({
+ *   reconnect: true,
+ *   maxReconnectAttempts: 10,
+ *   reconnectDelay: 1000,
+ *   pingInterval: 30_000,
+ *   onDisconnect: () => console.log('Lost connection'),
+ *   onReconnect: () => console.log('Reconnected!'),
+ *   onStateChange: (state) => console.log('State:', state),
+ * });
+ * ```
+ */
 export interface WebSocketTransportOptions {
   /** Enable auto-reconnect on disconnect. Default: true */
   reconnect?: boolean;
@@ -56,6 +75,28 @@ export interface WebSocketTransportOptions {
 
 /**
  * WebSocket transport for real-time Surf command execution and event streaming.
+ *
+ * Supports automatic reconnection with exponential backoff, ping keepalive,
+ * stateful sessions, and event subscriptions.
+ *
+ * @example
+ * ```ts
+ * const ws = new WebSocketTransport({ reconnect: true });
+ * await ws.connect('wss://example.com/surf/ws', 'my-token');
+ *
+ * // Execute commands
+ * const response = await ws.execute('search', { query: 'shoes' });
+ *
+ * // Subscribe to events
+ * const unsub = ws.on('priceUpdate', (data) => console.log(data));
+ *
+ * // Start a session
+ * const sessionId = await ws.startSession();
+ *
+ * // Clean up
+ * unsub();
+ * ws.close();
+ * ```
  */
 export class WebSocketTransport {
   private ws: WebSocketLike | null = null;
@@ -250,7 +291,20 @@ export class WebSocketTransport {
   }
 
   /**
-   * Execute a command over WebSocket.
+   * Execute a command over the WebSocket connection.
+   *
+   * @param command - The command name to execute.
+   * @param params - Optional command parameters.
+   * @returns A promise that resolves with the {@link SurfResponse} when the server responds.
+   * @throws {@link SurfClientError} with code `NOT_CONNECTED` if the WebSocket is not open.
+   *
+   * @example
+   * ```ts
+   * const response = await ws.execute('search', { query: 'shoes' });
+   * if (response.ok) {
+   *   console.log(response.result);
+   * }
+   * ```
    */
   execute(
     command: string,
@@ -278,7 +332,20 @@ export class WebSocketTransport {
   }
 
   /**
-   * Subscribe to a Surf event. Returns unsubscribe function.
+   * Subscribe to a server-sent event.
+   *
+   * @param event - The event name to listen for (must match a key in `SurfManifest.events`).
+   * @param callback - Handler called with the event data when received.
+   * @returns An unsubscribe function — call it to stop listening.
+   *
+   * @example
+   * ```ts
+   * const unsub = ws.on('orderCreated', (data) => {
+   *   console.log('New order:', data);
+   * });
+   * // Later: stop listening
+   * unsub();
+   * ```
    */
   on(event: string, callback: EventCallback): () => void {
     let set = this.eventListeners.get(event);
@@ -291,7 +358,18 @@ export class WebSocketTransport {
   }
 
   /**
-   * Start a session over WebSocket.
+   * Start a stateful session over the WebSocket connection.
+   *
+   * @returns The server-assigned session ID.
+   * @throws {@link SurfClientError} with code `NOT_CONNECTED` if the WebSocket is not open.
+   * @throws {@link SurfClientError} if session creation fails on the server.
+   *
+   * @example
+   * ```ts
+   * const sessionId = await ws.startSession();
+   * const response = await ws.execute('addToCart', { productId: '123' });
+   * await ws.endSession();
+   * ```
    */
   async startSession(): Promise<string> {
     if (!this.ws || this.ws.readyState !== WS_OPEN) {
@@ -328,7 +406,9 @@ export class WebSocketTransport {
   }
 
   /**
-   * End the current session.
+   * End the current WebSocket session and release server-side resources.
+   *
+   * No-op if no session is active or the WebSocket is disconnected.
    */
   async endSession(): Promise<void> {
     if (!this.ws || this.ws.readyState !== WS_OPEN) return;
@@ -343,7 +423,10 @@ export class WebSocketTransport {
   }
 
   /**
-   * Close the WebSocket connection. Stops reconnection.
+   * Close the WebSocket connection permanently.
+   *
+   * Stops ping keepalive, cancels any pending reconnection attempts,
+   * and transitions to `'disconnected'` state.
    */
   close(): void {
     this.intentionalClose = true;

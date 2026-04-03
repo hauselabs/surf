@@ -2,8 +2,28 @@ import type { SurfManifest } from './types.js';
 import { SurfClientError } from './client.js';
 
 /**
- * Discover a Surf manifest from a URL.
- * Tries /.well-known/surf.json first, then falls back to HTML <meta name="surf"> tag.
+ * Discover a Surf manifest from a website URL.
+ *
+ * Uses a two-step discovery process:
+ * 1. Tries `GET /.well-known/surf.json` (standard location)
+ * 2. Falls back to parsing the HTML root page for a `<meta name="surf" content="...">` tag
+ *    pointing to the manifest URL
+ *
+ * @param baseUrl - The base URL of the Surf-enabled site (e.g. `'https://example.com'`).
+ * @param fetchFn - Custom `fetch` implementation. Defaults to `globalThis.fetch`.
+ * @param timeoutMs - Discovery timeout in milliseconds. Default: `5000`.
+ * @param auth - Optional Bearer token for authenticated manifest endpoints.
+ * @returns The parsed {@link SurfManifest}.
+ * @throws {@link SurfClientError} with code `TIMEOUT` if discovery times out.
+ * @throws {@link SurfClientError} with code `NETWORK_ERROR` on network failures.
+ * @throws {@link SurfClientError} with code `INVALID_MANIFEST` if the manifest is missing or malformed.
+ *
+ * @example
+ * ```ts
+ * const manifest = await discoverManifest('https://example.com');
+ * console.log(manifest.name);     // 'My Store'
+ * console.log(manifest.commands);  // { search: { ... }, getProduct: { ... } }
+ * ```
  */
 export async function discoverManifest(
   baseUrl: string,

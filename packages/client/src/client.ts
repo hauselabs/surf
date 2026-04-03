@@ -174,10 +174,29 @@ function sleep(ms: number): Promise<void> {
 /**
  * SurfClient — the agent-side SDK for interacting with Surf-enabled websites.
  *
+ * Provides HTTP command execution, WebSocket real-time communication,
+ * stateful sessions, pipelines, response caching, automatic retries,
+ * and typed command proxies.
+ *
+ * Create a client via discovery (recommended) or from a pre-loaded manifest:
+ *
  * @example
  * ```ts
+ * // Auto-discover manifest from the site
  * const client = await SurfClient.discover('https://example.com');
  * const result = await client.execute('search', { query: 'shoes' });
+ *
+ * // Or with a pre-loaded manifest
+ * const client = SurfClient.fromManifest(manifest, { baseUrl: 'https://example.com' });
+ * ```
+ *
+ * @example
+ * ```ts
+ * // With retry and caching
+ * const client = await SurfClient.discover('https://example.com', {
+ *   retry: { maxAttempts: 3, backoffMs: 500, backoffMultiplier: 2 },
+ *   cache: { ttlMs: 30_000, maxSize: 100 },
+ * });
  * ```
  */
 /** Default base path — matches the built-in core middleware mount point. */
@@ -214,6 +233,22 @@ export class SurfClient {
 
   /**
    * Discover and connect to a Surf-enabled site.
+   *
+   * Fetches the Surf manifest from `/.well-known/surf.json` (with HTML meta tag fallback),
+   * then creates a fully configured client instance.
+   *
+   * @param url - The base URL of the Surf-enabled site.
+   * @param options - Optional client configuration (auth, retry, cache, etc.).
+   * @returns A connected `SurfClient` with the discovered manifest.
+   * @throws {@link SurfClientError} if manifest discovery fails.
+   *
+   * @example
+   * ```ts
+   * const client = await SurfClient.discover('https://example.com', {
+   *   auth: 'my-token',
+   *   cache: { ttlMs: 60_000, maxSize: 50 },
+   * });
+   * ```
    */
   static async discover(
     url: string,
@@ -227,18 +262,56 @@ export class SurfClient {
   }
 
   /**
-   * Create a client with a pre-loaded manifest (skip discovery).
+   * Create a client with a pre-loaded manifest, skipping discovery.
+   *
+   * Use this when you already have the manifest (e.g. from a build step,
+   * a cache, or a bundled configuration).
+   *
+   * @param manifest - The pre-loaded Surf manifest.
+   * @param options - Client configuration including `baseUrl`.
+   * @returns A configured `SurfClient` instance.
+   *
+   * @example
+   * ```ts
+   * const client = SurfClient.fromManifest(manifest, {
+   *   baseUrl: 'https://example.com',
+   *   auth: 'my-token',
+   * });
+   * ```
    */
   static fromManifest(manifest: SurfManifest, options: SurfClientOptions): SurfClient {
     return new SurfClient(manifest, options);
   }
 
-  /** List all available commands (as property). */
+  /**
+   * All available commands from the manifest, keyed by name.
+   *
+   * @example
+   * ```ts
+   * for (const [name, cmd] of Object.entries(client.commands)) {
+   *   console.log(`${name}: ${cmd.description}`);
+   * }
+   * ```
+   */
   get commands(): Record<string, ManifestCommand> {
     return this.manifest.commands;
   }
 
-  /** Get a specific command definition. */
+  /**
+   * Get a specific command definition by name.
+   *
+   * @param name - The command name to look up.
+   * @returns The command definition, or `undefined` if not found.
+   *
+   * @example
+   * ```ts
+   * const searchCmd = client.command('search');
+   * if (searchCmd) {
+   *   console.log(searchCmd.description);
+   *   console.log(searchCmd.params);
+   * }
+   * ```
+   */
   command(name: string): ManifestCommand | undefined {
     return this.manifest.commands[name];
   }
@@ -255,8 +328,20 @@ export class SurfClient {
   }
 
   /**
-   * Execute a command via HTTP.
-   * Respects retry config and cache if configured.
+   * Execute a command via HTTP transport.
+   *
+   * Automatically applies response caching (for commands without side effects)
+   * and retries (for transient failures) when configured.
+   *
+   * @param command - The command name to execute.
+   * @param params - Optional parameters for the command.
+   * @returns The command result.
+   * @throws {@link SurfClientError} on transport or application errors.
+   *
+   * @example
+   * ```ts
+   * const results = await client.execute('search', { query: 'shoes', limit: 10 });
+   * ```
    */
   async execute(command: string, params?: Record<string, unknown>): Promise<unknown> {
     // Check cache (skip if command has side effects)
@@ -298,14 +383,46 @@ export class SurfClient {
   }
 
   /**
-   * Clear the response cache. Optionally for a specific command only.
+   * Clear the response cache.
+   *
+   * @param command - If provided, only clear cached entries for this command.
+   *                  If omitted, clears the entire cache.
+   *
+   * @example
+   * ```ts
+   * client.clearCache('search');  // Clear only search results
+   * client.clearCache();          // Clear everything
+   * ```
    */
   clearCache(command?: string): void {
     this.cache?.clear(command);
   }
 
   /**
-   * Execute multiple commands in a pipeline (single round-trip).
+   * Execute multiple commands in a pipeline — a single HTTP round-trip.
+   *
+   * Pipelines are more efficient than sequential `execute()` calls when
+   * you need results from multiple independent commands.
+   *
+   * @param steps - The pipeline steps to execute in order.
+   * @param options - Optional pipeline configuration.
+   * @param options.sessionId - Session ID to scope all steps to.
+   * @param options.continueOnError - If `true`, continue executing remaining steps
+   *                                   even if a step fails. Default: `false`.
+   * @returns A {@link PipelineResponse} with per-step results.
+   * @throws {@link SurfClientError} if the pipeline request itself fails.
+   *
+   * @example
+   * ```ts
+   * const response = await client.pipeline([
+   *   { command: 'getUser', params: { id: '1' }, as: 'user' },
+   *   { command: 'getOrders', params: { userId: '1' } },
+   * ], { continueOnError: true });
+   *
+   * for (const step of response.results) {
+   *   console.log(step.command, step.ok ? step.result : step.error);
+   * }
+   * ```
    */
   async pipeline(steps: PipelineStep[], options?: { sessionId?: string; continueOnError?: boolean }): Promise<PipelineResponse> {
     // Derive pipeline URL from the configured execute path (replace /execute → /pipeline)
@@ -350,7 +467,20 @@ export class SurfClient {
   }
 
   /**
-   * Re-fetch the manifest and check if the checksum has changed.
+   * Re-fetch the manifest and check if the remote version has changed.
+   *
+   * Compares the remote checksum against the local manifest's checksum.
+   * If changed, the new manifest is included in the response.
+   *
+   * @returns An {@link UpdateCheckResult} with `changed` flag and optional new manifest.
+   *
+   * @example
+   * ```ts
+   * const update = await client.checkForUpdates();
+   * if (update.changed && update.manifest) {
+   *   console.log('Manifest updated! New commands:', Object.keys(update.manifest.commands));
+   * }
+   * ```
    */
   async checkForUpdates(): Promise<UpdateCheckResult & { manifest?: SurfManifest }> {
     const fetchFn = this.http.getFetch();
@@ -364,7 +494,20 @@ export class SurfClient {
   }
 
   /**
-   * Connect via WebSocket for real-time interaction.
+   * Connect via WebSocket for real-time command execution and event streaming.
+   *
+   * Establishes a WebSocket connection to the Surf server's `/surf/ws` endpoint.
+   * The returned transport supports `execute()`, `on()` for events, and session management.
+   *
+   * @returns A connected {@link WebSocketTransport} instance.
+   * @throws {@link SurfClientError} if the WebSocket connection fails.
+   *
+   * @example
+   * ```ts
+   * const ws = await client.connect();
+   * ws.on('priceUpdate', (data) => console.log('New price:', data));
+   * const result = await ws.execute('subscribe', { channel: 'prices' });
+   * ```
    */
   async connect(): Promise<WebSocketTransport> {
     const wsUrl = this.baseUrl.replace(/^http/, 'ws').concat('/surf/ws');
@@ -375,7 +518,22 @@ export class SurfClient {
   }
 
   /**
-   * Start a stateful session.
+   * Start a stateful session for multi-step interactions.
+   *
+   * Sessions maintain server-side state across commands — useful for
+   * shopping carts, wizards, and transactional workflows.
+   *
+   * @returns A {@link SurfSession} with `execute()` and `end()` methods.
+   * @throws {@link SurfClientError} if session creation fails.
+   *
+   * @example
+   * ```ts
+   * const session = await client.startSession();
+   * await session.execute('addToCart', { productId: '123', quantity: 2 });
+   * console.log(session.state); // { cartItems: 2, total: 258 }
+   * await session.execute('checkout');
+   * await session.end();
+   * ```
    */
   async startSession(): Promise<SurfSession> {
     const sessionId = await this.http.startSession();
@@ -405,7 +563,12 @@ export class SurfClient {
     return session;
   }
 
-  /** Disconnect WebSocket if connected. */
+  /**
+   * Disconnect the WebSocket transport if connected.
+   *
+   * This is a no-op if no WebSocket connection is active.
+   * Stops reconnection attempts and closes the underlying socket.
+   */
   disconnect(): void {
     this.ws?.close();
     this.ws = null;
