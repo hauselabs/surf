@@ -3,6 +3,7 @@ import {
   provide,
   ref,
   computed,
+  watch,
   onMounted,
   onUnmounted,
   type InjectionKey,
@@ -221,7 +222,13 @@ export const SurfProvider = defineComponent({
 
     // Register window.surf with WS-backed server executor
     let cleanupExecutor: (() => void) | null = null;
-    let statusInterval: ReturnType<typeof setInterval> | null = null;
+
+    const statusMap: Record<ConnectionStatus, 'connected' | 'disconnected' | 'connecting'> = {
+      connected: 'connected',
+      connecting: 'connecting',
+      disconnected: 'disconnected',
+      reconnecting: 'connecting',
+    };
 
     function setupWindowSurf() {
       if (typeof window === 'undefined') return;
@@ -231,13 +238,6 @@ export const SurfProvider = defineComponent({
       if (props.endpoint) {
         setManifestUrl(`${props.endpoint.replace(/\/$/, '')}/.well-known/surf.json`);
       }
-
-      const statusMap: Record<ConnectionStatus, 'connected' | 'disconnected' | 'connecting'> = {
-        connected: 'connected',
-        connecting: 'connecting',
-        disconnected: 'disconnected',
-        reconnecting: 'connecting',
-      };
 
       cleanupExecutor = setServerExecutor((command, params) => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -254,11 +254,12 @@ export const SurfProvider = defineComponent({
       });
 
       setServerStatus(statusMap[status.value] ?? 'disconnected');
-
-      statusInterval = setInterval(() => {
-        setServerStatus(statusMap[status.value] ?? 'disconnected');
-      }, 500);
     }
+
+    // Sync status reactively instead of polling (event-driven, no interval)
+    watch(status, (newStatus) => {
+      setServerStatus(statusMap[newStatus] ?? 'disconnected');
+    });
 
     onMounted(() => {
       connect();
@@ -268,7 +269,6 @@ export const SurfProvider = defineComponent({
     onUnmounted(() => {
       mounted = false;
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (statusInterval) clearInterval(statusInterval);
       if (cleanupExecutor) cleanupExecutor();
       setServerStatus('disconnected');
       ws?.close();

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { SurfContext, type ConnectionStatus, type EventCallback, type SurfResult } from './context.js';
 import { registerWindowSurfWs } from './window-surf.js';
+import { setServerStatus } from '@surfjs/web';
 
 /** Props for the SurfProvider component. */
 export interface SurfProviderProps {
@@ -171,15 +172,8 @@ export function SurfProvider({ url, auth, channels, endpoint, children }: SurfPr
     };
   }, [connect]);
 
-  // Register window.surf global with WS-backed server executor
+  // Register window.surf global with WS-backed server executor (only re-runs when endpoint changes)
   useEffect(() => {
-    const statusMap: Record<ConnectionStatus, 'connected' | 'disconnected' | 'connecting'> = {
-      connected: 'connected',
-      connecting: 'connecting',
-      disconnected: 'disconnected',
-      reconnecting: 'connecting',
-    };
-
     const cleanup = registerWindowSurfWs(
       {
         execute: (command: string, params?: Record<string, unknown>) => {
@@ -196,13 +190,24 @@ export function SurfProvider({ url, auth, channels, endpoint, children }: SurfPr
             ws.send(JSON.stringify({ type: 'execute', id, command, params: params ?? {} }));
           });
         },
-        getStatus: () => statusMap[status] ?? 'disconnected',
+        getStatus: () => 'disconnected', // Status is synced reactively below
       },
       endpoint,
     );
 
     return cleanup;
-  }, [status, endpoint]);
+  }, [endpoint]);
+
+  // Sync connection status to window.surf reactively (event-driven, no polling)
+  useEffect(() => {
+    const statusMap: Record<ConnectionStatus, 'connected' | 'disconnected' | 'connecting'> = {
+      connected: 'connected',
+      connecting: 'connecting',
+      disconnected: 'disconnected',
+      reconnecting: 'connecting',
+    };
+    setServerStatus(statusMap[status] ?? 'disconnected');
+  }, [status]);
 
   const execute = useCallback((command: string, params?: Record<string, unknown>): Promise<SurfResult> => {
     const ws = wsRef.current;

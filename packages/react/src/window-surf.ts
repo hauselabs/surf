@@ -60,12 +60,7 @@ export function registerWindowSurfWs(
 
   setServerStatus(wsExecutor.getStatus());
 
-  const statusInterval = setInterval(() => {
-    setServerStatus(wsExecutor.getStatus());
-  }, 500);
-
   return () => {
-    clearInterval(statusInterval);
     cleanupExecutor();
     setServerStatus('disconnected');
   };

@@ -178,7 +178,7 @@ export function createSurfProvider(options: CreateSurfProviderOptions): SurfCont
   function destroy() {
     destroyed = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    if (statusInterval) clearInterval(statusInterval);
+    if (unsubscribeStatusFn) unsubscribeStatusFn();
     if (cleanupExecutor) cleanupExecutor();
     setServerStatus('disconnected');
     ws?.close();
@@ -187,7 +187,7 @@ export function createSurfProvider(options: CreateSurfProviderOptions): SurfCont
 
   // Register window.surf
   let cleanupExecutor: (() => void) | null = null;
-  let statusInterval: ReturnType<typeof setInterval> | null = null;
+  let unsubscribeStatusFn: (() => void) | null = null;
 
   if (typeof window !== 'undefined') {
     ensureSurf();
@@ -217,12 +217,10 @@ export function createSurfProvider(options: CreateSurfProviderOptions): SurfCont
       });
     });
 
-    let currentStatus: ConnectionStatus = 'disconnected';
-    status.subscribe(s => { currentStatus = s; });
-
-    statusInterval = setInterval(() => {
-      setServerStatus(statusMap[currentStatus] ?? 'disconnected');
-    }, 500);
+    // Sync status reactively via subscription instead of polling (event-driven, no interval)
+    unsubscribeStatusFn = status.subscribe(s => {
+      setServerStatus(statusMap[s] ?? 'disconnected');
+    });
   }
 
   // Start connection
