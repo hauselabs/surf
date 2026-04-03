@@ -10,6 +10,7 @@ export { SURF_ERROR_CODES, isSurfErrorCode } from './types.js';
 export type {
   SurfManifest,
   ManifestCommand,
+  ManifestChannel,
   SurfClientOptions,
   SurfSession,
   UpdateCheckResult,

@@ -54,6 +54,17 @@ export interface AuthConfig {
   description?: string;
 }
 
+/**
+ * Serialized representation of a real-time channel in the manifest.
+ * Mirrors core's ManifestChannel for client-side independence.
+ */
+export interface ManifestChannel {
+  /** Human-readable description of what this channel provides. */
+  description: string;
+  /** Schema describing the shape of state pushed on this channel. */
+  stateSchema?: Record<string, ParamSchema | TypeRef>;
+}
+
 export interface EventDefinition {
   description: string;
   data?: Record<string, ParamSchema | TypeRef>;
@@ -70,12 +81,16 @@ export interface SurfManifest {
   surf: string;
   name: string;
   description?: string;
+  /** Longer human/agent-readable context about the site — what it does, what kind of content, editorial tone. */
+  about?: string;
   version?: string;
   baseUrl?: string;
   auth?: AuthConfig;
   commands: Record<string, ManifestCommand>;
   events?: Record<string, EventDefinition>;
   types?: Record<string, TypeDefinition>;
+  /** Real-time channels available for subscription via Surf Live. */
+  channels?: Record<string, ManifestChannel>;
   /** Deterministic SHA-256 hash of the commands schema. */
   checksum: string;
   /** ISO timestamp of when the Surf instance was created. */
