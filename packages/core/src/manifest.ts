@@ -30,12 +30,24 @@ export interface ManifestOptions {
 
 /**
  * Generate a Surf manifest from a config.
- * Flattens nested command groups to dot-notation keys.
- * Includes a deterministic checksum and updatedAt timestamp.
  *
- * Commands with `auth: 'hidden'` are excluded from the manifest
- * unless `options.authenticated` is true. They are still executable
+ * Flattens nested command groups to dot-notation keys, computes a deterministic
+ * SHA-256 checksum, and includes an `updatedAt` timestamp.
+ *
+ * Commands with `auth: 'hidden'` are excluded from the public manifest
+ * unless `options.authenticated` is `true`. Hidden commands remain executable
  * when a valid auth token is provided.
+ *
+ * @param config - The Surf configuration object.
+ * @param options - Optional manifest generation options or legacy `updatedAt` string.
+ * @returns A complete {@link SurfManifest} with commands, checksum, and metadata.
+ *
+ * @example
+ * ```ts
+ * const manifest = await generateManifest(config);
+ * console.log(manifest.commands); // { 'users.get': { description: '...' }, ... }
+ * console.log(manifest.checksum); // SHA-256 hex string
+ * ```
  */
 export async function generateManifest(config: SurfConfig, options?: ManifestOptions | string): Promise<SurfManifest> {
   // Backward compat: string arg = updatedAt

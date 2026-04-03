@@ -2,13 +2,35 @@ import type { SurfMiddleware, MiddlewareContext } from './middleware.js';
 import type { CommandDefinition } from './types.js';
 import { authRequired, authFailed } from './errors.js';
 
+/**
+ * Result returned by an {@link AuthVerifier} function.
+ */
 export interface AuthResult {
+  /** Whether the token is valid. */
   valid: boolean;
+  /** Arbitrary claims extracted from the token (e.g. `{ sub: 'user123' }`). */
   claims?: Record<string, unknown>;
+  /** Scopes/permissions granted by this token. */
   scopes?: string[];
+  /** Human-readable reason when `valid` is `false`. */
   reason?: string;
 }
 
+/**
+ * Function that verifies an authentication token for a given command.
+ *
+ * @param token - The bearer token (without the `Bearer ` prefix).
+ * @param command - The command name being accessed.
+ * @returns An {@link AuthResult} indicating validity, claims, and scopes.
+ *
+ * @example
+ * ```ts
+ * const verifier: AuthVerifier = async (token, command) => {
+ *   const user = await jwt.verify(token);
+ *   return { valid: true, claims: { sub: user.id }, scopes: user.scopes };
+ * };
+ * ```
+ */
 export type AuthVerifier = (token: string, command: string) => Promise<AuthResult>;
 
 /**
@@ -70,6 +92,23 @@ async function tokenFingerprint(token: string): Promise<string> {
   }
 }
 
+/**
+ * Create a simple bearer token verifier that checks against a list of valid tokens.
+ *
+ * Uses timing-safe comparison to prevent timing attacks.
+ *
+ * @param validTokens - Array of valid bearer tokens.
+ * @returns An {@link AuthVerifier} function.
+ *
+ * @example
+ * ```ts
+ * const surf = await createSurf({
+ *   name: 'my-api',
+ *   authVerifier: bearerVerifier([process.env.API_TOKEN!]),
+ *   commands: { ... },
+ * });
+ * ```
+ */
 export function bearerVerifier(validTokens: string[]): AuthVerifier {
   return async (token: string): Promise<AuthResult> => {
     for (const valid of validTokens) {
@@ -103,6 +142,23 @@ function checkScopes(
   return true;
 }
 
+/**
+ * Create a scoped token verifier that maps tokens to their allowed scopes.
+ *
+ * When used with commands that have `requiredScopes`, the middleware automatically
+ * checks that the token's scopes satisfy the command's requirements.
+ *
+ * @param tokenScopes - Map of token strings to their granted scopes.
+ * @returns An {@link AuthVerifier} function.
+ *
+ * @example
+ * ```ts
+ * const verifier = scopedVerifier({
+ *   'admin-token': ['read', 'write', 'admin'],
+ *   'readonly-token': ['read'],
+ * });
+ * ```
+ */
 export function scopedVerifier(
   tokenScopes: Record<string, string[]>,
 ): AuthVerifier {
@@ -116,6 +172,17 @@ export function scopedVerifier(
   };
 }
 
+/**
+ * Create the built-in authentication middleware.
+ *
+ * This middleware is automatically added when `authVerifier` is set in the Surf config.
+ * It checks auth requirements per command (`'none'`, `'required'`, `'optional'`, `'hidden'`)
+ * and validates scopes when `requiredScopes` is defined on the command.
+ *
+ * @param verifier - The {@link AuthVerifier} function to validate tokens.
+ * @param getCommand - Lookup function to retrieve command definitions by name.
+ * @returns A {@link SurfMiddleware} that enforces authentication.
+ */
 export function createAuthMiddleware(
   verifier: AuthVerifier,
   getCommand: (name: string) => CommandDefinition | undefined,

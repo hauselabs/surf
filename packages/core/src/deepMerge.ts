@@ -15,6 +15,19 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * - Primitives, null, and non-plain objects replace the target value.
  *
  * Returns a new object — neither `target` nor `source` is mutated.
+ *
+ * @param target - The base object to merge into.
+ * @param source - The object whose values take precedence.
+ * @returns A new merged object with the combined properties.
+ *
+ * @example
+ * ```ts
+ * const result = deepMerge(
+ *   { a: 1, nested: { x: 10, y: 20 } },
+ *   { b: 2, nested: { y: 30 } },
+ * );
+ * // → { a: 1, b: 2, nested: { x: 10, y: 30 } }
+ * ```
  */
 export function deepMerge<T extends Record<string, unknown>>(
   target: T,

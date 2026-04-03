@@ -6,8 +6,15 @@
 /**
  * Map a Surf error code to the appropriate HTTP status code.
  *
- * @param code - A `SurfErrorCode` string (e.g. `'NOT_FOUND'`, `'RATE_LIMITED'`)
- * @returns The corresponding HTTP status number (defaults to 500)
+ * @param code - A `SurfErrorCode` string (e.g. `'NOT_FOUND'`, `'RATE_LIMITED'`).
+ * @returns The corresponding HTTP status number (defaults to 500 for unknown codes).
+ *
+ * @example
+ * ```ts
+ * getErrorStatus('NOT_FOUND');     // → 404
+ * getErrorStatus('RATE_LIMITED');  // → 429
+ * getErrorStatus('INTERNAL_ERROR'); // → 500
+ * ```
  */
 export function getErrorStatus(code: string): number {
   switch (code) {

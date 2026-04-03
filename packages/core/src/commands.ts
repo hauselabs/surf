@@ -17,6 +17,16 @@ export interface CommandRegistryOptions {
 
 /**
  * Command registry — stores, validates, and executes commands.
+ *
+ * Handles command lookup, parameter validation, rate limiting, middleware execution,
+ * and return value validation. Used internally by {@link createSurf} but also
+ * exported for advanced use cases.
+ *
+ * @example
+ * ```ts
+ * const registry = new CommandRegistry(commands, { strictParams: true });
+ * const response = await registry.execute('users.get', { id: '123' }, context);
+ * ```
  */
 export class CommandRegistry {
   private readonly commands: ReadonlyMap<string, CommandDefinition>;

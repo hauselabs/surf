@@ -8,6 +8,22 @@ interface WindowEntry {
 
 /**
  * Sliding window rate limiter — pure in-memory, no external dependencies.
+ *
+ * Tracks request timestamps per key within a configurable time window.
+ * Automatically cleans up stale entries to prevent memory leaks.
+ *
+ * @example
+ * ```ts
+ * const limiter = new RateLimiter();
+ * const config = { windowMs: 60_000, maxRequests: 100, keyBy: 'ip' as const };
+ * const key = RateLimiter.buildKey('users.list', config, { ip: '1.2.3.4' });
+ *
+ * try {
+ *   limiter.check(config, key);
+ * } catch (err) {
+ *   // err is a SurfError with code 'RATE_LIMITED'
+ * }
+ * ```
  */
 export class RateLimiter {
   private readonly windows = new Map<string, WindowEntry>();
@@ -15,9 +31,14 @@ export class RateLimiter {
   private static readonly CLEANUP_INTERVAL_MS = 60_000;
 
   /**
-   * Check if a request is allowed under the given config and key.
-   * Throws SurfError with RATE_LIMITED if limit is exceeded.
-   * Returns ms until the oldest entry expires (for Retry-After).
+   * Check if a request is allowed under the given rate limit config and key.
+   *
+   * If the request is within limits, it is recorded. If the limit is exceeded,
+   * a `RATE_LIMITED` error is thrown with the retry-after time in details.
+   *
+   * @param config - Rate limit configuration (window size, max requests).
+   * @param key - The bucket key (built via {@link RateLimiter.buildKey}).
+   * @throws {SurfError} With code `RATE_LIMITED` and `retryAfterMs` in details.
    */
   check(config: RateLimitConfig, key: string): void {
     this.maybeCleanup(config.windowMs);
@@ -61,6 +82,11 @@ export class RateLimiter {
 
   /**
    * Build the rate limit key for a command + context.
+   *
+   * @param command - The command name.
+   * @param config - Rate limit config (uses `keyBy` to determine key strategy).
+   * @param ctx - Execution context with optional `ip`, `sessionId`, and `auth`.
+   * @returns A string key for the rate limit bucket.
    */
   static buildKey(
     command: string,
@@ -82,7 +108,10 @@ export class RateLimiter {
   }
 
   /**
-   * Get the retry-after ms from a RATE_LIMITED SurfError, or 0.
+   * Extract the retry-after milliseconds from a `RATE_LIMITED` {@link SurfError}.
+   *
+   * @param err - A SurfError (typically with code `RATE_LIMITED`).
+   * @returns Milliseconds until the client can retry, or `0` if not available.
    */
   static retryAfterMs(err: SurfError): number {
     return (err.details?.['retryAfterMs'] as number | undefined) ?? 0;

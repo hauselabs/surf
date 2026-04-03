@@ -70,6 +70,39 @@ export interface SurfInstance {
   readonly commands: CommandRegistry;
 }
 
+/**
+ * Create a fully configured Surf instance from a config object.
+ *
+ * This is the main entry point for building a Surf API. It initializes the
+ * command registry, session store, event bus, middleware pipeline, and
+ * generates the manifest. The returned instance exposes HTTP handlers,
+ * WebSocket support, and the Surf Live real-time API.
+ *
+ * **Important:** This function is async — always `await` it.
+ *
+ * @param config - The Surf configuration object defining commands, auth, middleware, etc.
+ * @returns A fully initialized {@link SurfInstance} ready to handle requests.
+ *
+ * @example
+ * ```ts
+ * import { createSurf, defineCommand } from '@surfjs/core';
+ *
+ * const surf = await createSurf({
+ *   name: 'my-api',
+ *   version: '1.0.0',
+ *   commands: {
+ *     greet: defineCommand({
+ *       description: 'Say hello',
+ *       params: { name: { type: 'string', required: true } },
+ *       run: (params) => ({ message: `Hello, ${params.name}!` }),
+ *     }),
+ *   },
+ * });
+ *
+ * // Use with any framework:
+ * // app.all('/surf/*', surf.middleware());
+ * ```
+ */
 export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   // Eagerly try to load ws for WebSocket support (works in both CJS and ESM).
   // ws is an optional peer dependency — typed via devDependency @types/ws.

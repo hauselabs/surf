@@ -1,15 +1,32 @@
 import type { ParamSchema, ParamType } from './types.js';
 import { invalidParams, internalError } from './errors.js';
 
+/** Options for {@link validateParams}. */
 export interface ValidateParamsOptions {
-  /** When true, reject parameters not declared in the schema. */
+  /** When `true`, reject parameters not declared in the schema. Default: `false`. */
   strictParams?: boolean;
 }
 
 /**
- * Validates and coerces parameters against a schema.
- * Returns the validated (and defaulted) params object.
- * Throws SurfError with code INVALID_PARAMS on failure.
+ * Validate and coerce parameters against a schema.
+ *
+ * Checks required fields, type correctness, enum values, and nested objects/arrays.
+ * Applies defaults for missing optional fields. When `strictParams` is enabled,
+ * rejects any parameters not declared in the schema.
+ *
+ * @param params - The raw parameters to validate.
+ * @param schema - The parameter schema to validate against.
+ * @param options - Optional validation settings.
+ * @returns The validated parameters with defaults applied.
+ * @throws {SurfError} With code `INVALID_PARAMS` if validation fails.
+ *
+ * @example
+ * ```ts
+ * const validated = validateParams(
+ *   { name: 'Alice', age: 30 },
+ *   { name: { type: 'string', required: true }, age: { type: 'number' } },
+ * );
+ * ```
  */
 export function validateParams(
   params: Record<string, unknown> | undefined,
@@ -121,8 +138,15 @@ function getParamType(value: unknown): ParamType | 'null' | 'unknown' {
 }
 
 /**
- * Validates a command's return value against its declared schema.
- * Throws SurfError with INTERNAL_ERROR if the shape doesn't match.
+ * Validate a command's return value against its declared return schema.
+ *
+ * Used when `validateReturns` or `strict` mode is enabled. Ensures the
+ * command handler returns data matching the declared `returns` schema.
+ *
+ * @param result - The value returned by the command handler.
+ * @param schema - The expected return schema.
+ * @param commandName - The command name (for error messages).
+ * @throws {SurfError} With code `INTERNAL_ERROR` if the return shape doesn't match.
  */
 export function validateResult(result: unknown, schema: ParamSchema, commandName: string): void {
   const actual = getParamType(result);

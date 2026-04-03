@@ -81,6 +81,29 @@ function getNestedValue(obj: unknown, path: string): unknown {
 
 /**
  * Execute a pipeline of commands sequentially.
+ *
+ * Each step runs in order, with `$alias` references resolved from previous step results.
+ * Supports session state propagation across steps and configurable error handling.
+ *
+ * @param request - The pipeline request containing steps and options.
+ * @param registry - The command registry to execute commands against.
+ * @param sessions - Session store for state management.
+ * @param auth - Optional auth token to pass to each command's execution context.
+ * @returns A {@link PipelineResponse} with results from each step and an overall `ok` flag.
+ *
+ * @example
+ * ```ts
+ * const response = await executePipeline(
+ *   {
+ *     steps: [
+ *       { command: 'users.get', params: { id: '123' }, as: 'user' },
+ *       { command: 'posts.list', params: { authorId: '$user.id' } },
+ *     ],
+ *   },
+ *   registry,
+ *   sessions,
+ * );
+ * ```
  */
 export async function executePipeline(
   request: PipelineRequest,

@@ -15,8 +15,19 @@ function hasHandlerAlias(value: unknown): value is Record<string, unknown> & { h
 }
 
 /**
- * Type guard — checks whether a value is a CommandDefinition (has a `run` function)
- * rather than a nested CommandGroup. Also accepts `handler` as an alias for `run`.
+ * Type guard — checks whether a value is a {@link CommandDefinition} (has a `run` function)
+ * rather than a nested {@link CommandGroup}. Also accepts `handler` as an alias for `run`.
+ *
+ * @param value - The value to check.
+ * @returns `true` if the value is a command definition.
+ *
+ * @example
+ * ```ts
+ * const entry = commands['users.get'];
+ * if (isCommandDefinition(entry)) {
+ *   // entry is CommandDefinition — has .run(), .description, etc.
+ * }
+ * ```
  */
 export function isCommandDefinition(value: unknown): value is CommandDefinition {
   if (typeof value !== 'object' || value === null) return false;
@@ -68,7 +79,24 @@ export function group(
 }
 
 /**
- * Flatten a potentially nested CommandGroup into a flat Record with dot-notation keys.
+ * Flatten a potentially nested {@link CommandGroup} into a flat Record with dot-notation keys.
+ *
+ * Nested groups become dot-separated keys (e.g. `{ users: { get: ... } }` → `{ 'users.get': ... }`).
+ * Also normalizes `handler` → `run` aliases and boolean `auth` to string literals.
+ *
+ * @param commands - The nested command tree to flatten.
+ * @returns A flat record mapping dot-notation names to {@link CommandDefinition} objects.
+ *
+ * @example
+ * ```ts
+ * const flat = flattenCommands({
+ *   users: {
+ *     get:  { description: 'Get user', run: async () => ({}) },
+ *     list: { description: 'List users', run: async () => ([]) },
+ *   },
+ * });
+ * // → { 'users.get': ..., 'users.list': ... }
+ * ```
  */
 export function flattenCommands(
   commands: Record<string, CommandDefinition | CommandGroup>,

@@ -14,8 +14,17 @@ export interface InMemorySessionStoreOptions {
 }
 
 /**
- * In-memory session store. Good for development and single-process apps.
- * Implement SessionStore interface for Redis/database-backed sessions.
+ * In-memory session store with TTL expiration and LRU eviction.
+ *
+ * Good for development and single-process apps. For production, implement
+ * the {@link SessionStore} interface backed by Redis, a database, etc.
+ *
+ * @example
+ * ```ts
+ * const store = new InMemorySessionStore({ ttlMs: 60 * 60 * 1000, maxSessions: 1000 });
+ * const session = await store.create();
+ * await store.update(session.id, { cart: [] });
+ * ```
  */
 export class InMemorySessionStore implements SessionStore {
   private readonly sessions = new Map<string, Session>();
