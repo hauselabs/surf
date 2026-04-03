@@ -7,6 +7,7 @@ import type {
 import { executePipeline } from '../transport/pipeline.js';
 import { assertNotPromise } from '../errors.js';
 import { resolveCorsHeaders, resolveCorsPreflightHeaders } from '../cors.js';
+import { getErrorStatus } from '../http-status.js';
 
 // ─── Minimal interfaces for Hono types (no hard dependency) ────────────
 
@@ -86,19 +87,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
     return resolveCorsPreflightHeaders(surf.corsConfig, c.req.header('origin'), methods);
   }
 
-  function getErrorStatus(code: string): number {
-    switch (code) {
-      case 'UNKNOWN_COMMAND': return 404;
-      case 'NOT_FOUND': return 404;
-      case 'INVALID_PARAMS': return 400;
-      case 'AUTH_REQUIRED': return 401;
-      case 'AUTH_FAILED': return 403;
-      case 'SESSION_EXPIRED': return 410;
-      case 'RATE_LIMITED': return 429;
-      case 'NOT_SUPPORTED': return 501;
-      default: return 500;
-    }
-  }
+  // getErrorStatus is now imported from '../http-status.js'
 
   // ─── OPTIONS (CORS preflight) ────────────────────────────────────────
   const optionsRoutes = [

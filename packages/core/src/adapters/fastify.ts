@@ -8,6 +8,7 @@ import { executePipeline } from '../transport/pipeline.js';
 import { createSseWriter, chunkEvent, doneEvent, errorEvent, type SseCompatibleResponse } from '../transport/sse.js';
 import { assertNotPromise } from '../errors.js';
 import { resolveCorsHeaders, resolveCorsPreflightHeaders } from '../cors.js';
+import { getErrorStatus } from '../http-status.js';
 
 // ─── Minimal interfaces for Fastify types (no hard dependency) ─────────
 
@@ -72,19 +73,7 @@ export function fastifyPlugin(surf: SurfInstance) {
     return Array.isArray(real) ? real[0] : real;
   }
 
-  function getErrorStatus(code: string): number {
-    switch (code) {
-      case 'UNKNOWN_COMMAND': return 404;
-      case 'NOT_FOUND': return 404;
-      case 'INVALID_PARAMS': return 400;
-      case 'AUTH_REQUIRED': return 401;
-      case 'AUTH_FAILED': return 403;
-      case 'SESSION_EXPIRED': return 410;
-      case 'RATE_LIMITED': return 429;
-      case 'NOT_SUPPORTED': return 501;
-      default: return 500;
-    }
-  }
+  // getErrorStatus is now imported from '../http-status.js'
 
   function getOrigin(headers: Record<string, string | string[] | undefined>): string | undefined {
     const val = headers['origin'] ?? headers['Origin'];

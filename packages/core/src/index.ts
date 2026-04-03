@@ -152,3 +152,7 @@ export type { InMemorySessionStoreOptions } from './session.js';
 export { EventBus } from './events.js';
 export type { EventScope, ScopedEventDefinition, SubscribeOptions } from './events.js';
 export { generateManifest, type ManifestOptions } from './manifest.js';
+
+// ─── HTTP Status ─────────────────────────────────────────────────────────────
+
+export { getErrorStatus } from './http-status.js';
