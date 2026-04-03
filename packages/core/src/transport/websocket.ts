@@ -1,7 +1,9 @@
-import type { WsIncomingMessage, WsOutgoingMessage, WsEventMessage, SurfResponse, LiveConfig } from '../types.js';
+import type { WsIncomingMessage, WsOutgoingMessage, WsEventMessage, SurfResponse, LiveConfig, RateLimitConfig } from '../types.js';
 import type { CommandRegistry } from '../commands.js';
 import type { InMemorySessionStore } from '../session.js';
 import type { EventBus } from '../events.js';
+import { RateLimiter } from '../ratelimit.js';
+import { SurfError } from '../errors.js';
 
 interface WsTransportOptions {
   registry: CommandRegistry;
@@ -14,6 +16,8 @@ interface WsTransportOptions {
   pingInterval?: number;
   /** Timeout for pong response in ms. Default: 10000 */
   pongTimeout?: number;
+  /** Global rate limit config for WebSocket execute messages. Per-command config overrides. */
+  rateLimit?: RateLimitConfig;
 }
 
 interface WebSocketLike {
@@ -64,6 +68,8 @@ export function attachWebSocket(
   const maxChannels = live?.maxChannelsPerConnection ?? 10;
   const pingIntervalMs = options.pingInterval ?? 30000;
   const _pongTimeoutMs = options.pongTimeout ?? 10000;
+  const rateLimiter = options.rateLimit ? new RateLimiter() : null;
+  const globalRateLimit = options.rateLimit;
 
   // Track all active connections for graceful shutdown
   const activeConnections = new Set<WebSocketLike>();
@@ -99,6 +105,8 @@ export function attachWebSocket(
       aliveFlags.set(ws, true);
     });
 
+    // Unique connection ID for rate limiting (used as fallback key)
+    const connectionId = `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     let authToken: string | undefined;
     let sessionId: string | undefined;
     const unsubscribes: Array<() => void> = [];
@@ -284,6 +292,37 @@ export function attachWebSocket(
         }
 
         case 'execute': {
+          // Rate limiting: check per-command config first, then global WS config
+          if (rateLimiter && globalRateLimit) {
+            const command = registry.get(msg.command);
+            const rateCfg = command?.rateLimit ?? globalRateLimit;
+            // Build key using session or connection ID as the identifier
+            const key = RateLimiter.buildKey(msg.command, rateCfg, {
+              sessionId: sessionId ?? connectionId,
+              auth: authToken,
+            });
+            try {
+              rateLimiter.check(rateCfg, key);
+            } catch (err) {
+              if (err instanceof SurfError && err.code === 'RATE_LIMITED') {
+                const retryAfterMs = RateLimiter.retryAfterMs(err);
+                const wsResponse: WsOutgoingMessage = {
+                  type: 'result',
+                  id: msg.id,
+                  ok: false,
+                  error: {
+                    code: 'RATE_LIMITED',
+                    message: 'Too many requests',
+                    ...(retryAfterMs > 0 ? { retryAfterMs } : {}),
+                  },
+                };
+                ws.send(JSON.stringify(wsResponse));
+                break;
+              }
+              throw err;
+            }
+          }
+
           const effectiveSessionId = msg.sessionId ?? sessionId;
           let sessionState: Record<string, unknown> | undefined;
 

@@ -213,6 +213,7 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
         sessions: sessionStore,
         events: eventBus,
         live: config.live,
+        rateLimit: config.rateLimit,
         getChannelState: (channelId: string) => {
           const state = channelStates.get(channelId);
           const version = channelVersions.get(channelId);
