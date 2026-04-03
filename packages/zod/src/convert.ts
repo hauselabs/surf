@@ -1,9 +1,28 @@
 import type { ParamSchema } from '@surfjs/core';
 
 /**
- * Convert a single Zod type to a Surf ParamSchema.
- * Uses duck-typing on _def.typeName to avoid instanceof checks
- * that break across Zod versions (especially Zod 4).
+ * Convert a single Zod type to a Surf `ParamSchema`.
+ *
+ * Uses duck-typing on `_def.typeName` (Zod 3) / `_def.type` (Zod 4)
+ * to avoid `instanceof` checks that break across Zod versions.
+ *
+ * Supports: string, number, boolean, literal, enum, nativeEnum, object, array,
+ * union, optional, nullable, default, and effects (refinements/transforms).
+ *
+ * @param zodType - A Zod schema type (e.g. `z.string()`, `z.object({...})`)
+ * @returns The equivalent Surf {@link ParamSchema}
+ *
+ * @example
+ * ```ts
+ * import { z } from 'zod';
+ * import { convertZodType } from '@surfjs/zod';
+ *
+ * const schema = convertZodType(z.string().describe('A search query'));
+ * // { type: 'string', description: 'A search query' }
+ *
+ * const enumSchema = convertZodType(z.enum(['asc', 'desc']));
+ * // { type: 'string', enum: ['asc', 'desc'] }
+ * ```
  */
 export function convertZodType(zodType: unknown): ParamSchema {
   const def = (zodType as { description?: string; _def?: Record<string, unknown> });
@@ -173,10 +192,28 @@ function convertZodTypeInner(zodType: unknown): ParamSchema {
 
 /**
  * Convert a Zod object schema to Surf's `Record<string, ParamSchema>` format.
- * This is the primary conversion function used by `defineZodCommand`.
+ *
+ * This is the primary conversion function used by {@link defineZodCommand}.
+ * Each property in the Zod object becomes a keyed `ParamSchema` entry
+ * with `required: true` by default (unless wrapped in `.optional()`).
  *
  * @param schema - A `z.object({...})` schema defining command parameters
- * @returns A record of parameter names to their Surf ParamSchema definitions
+ * @returns A record of parameter names to their Surf `ParamSchema` definitions
+ *
+ * @example
+ * ```ts
+ * import { z } from 'zod';
+ * import { zodToSurfParams } from '@surfjs/zod';
+ *
+ * const params = zodToSurfParams(z.object({
+ *   query: z.string().describe('Search query'),
+ *   limit: z.number().optional().default(20),
+ * }));
+ * // {
+ * //   query: { type: 'string', description: 'Search query', required: true },
+ * //   limit: { type: 'number', required: false, default: 20 },
+ * // }
+ * ```
  */
 export function zodToSurfParams(
   schema: unknown,

@@ -1,3 +1,19 @@
+/**
+ * @packageDocumentation
+ *
+ * Next.js integration for the Surf Protocol. Provides App Router and Pages Router
+ * handlers, plus middleware for `/.well-known/surf.json` discovery.
+ *
+ * @example
+ * ```ts
+ * // app/api/surf/[...slug]/route.ts
+ * import { createSurf } from '@surfjs/core';
+ * import { createSurfRouteHandler } from '@surfjs/next';
+ *
+ * const surf = createSurf({ name: 'my-app', commands: { ... } });
+ * export const { GET, POST } = createSurfRouteHandler(surf);
+ * ```
+ */
 import type { SurfInstance } from '@surfjs/core';
 import type {
   ExecuteRequest,

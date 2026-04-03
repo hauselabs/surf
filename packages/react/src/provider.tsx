@@ -5,7 +5,21 @@ import { SurfContext, type ConnectionStatus, type EventCallback, type SurfResult
 import { registerWindowSurfWs } from './window-surf.js';
 import { setServerStatus } from '@surfjs/web';
 
-/** Props for the SurfProvider component. */
+/**
+ * Props for the {@link SurfProvider} component.
+ *
+ * @example
+ * ```tsx
+ * <SurfProvider
+ *   url="wss://myapp.com/surf/ws"
+ *   auth="my-token"
+ *   channels={['dashboard', 'notifications']}
+ *   endpoint="https://myapp.com"
+ * >
+ *   <App />
+ * </SurfProvider>
+ * ```
+ */
 export interface SurfProviderProps {
   /** WebSocket URL to connect to (e.g. "wss://myapp.com/surf/ws"). */
   url: string;
@@ -42,6 +56,22 @@ const MAX_RECONNECT_DELAY = 30_000;
  *
  * Creates a single WebSocket connection shared via React context.
  * Auto-reconnects with exponential backoff (1s → 2s → 4s → 8s → max 30s).
+ * Also registers `window.surf` for browser-side command execution.
+ *
+ * @example
+ * ```tsx
+ * import { SurfProvider } from '@surfjs/react';
+ *
+ * export default function App() {
+ *   return (
+ *     <SurfProvider url="wss://myapp.com/surf/ws" auth="token">
+ *       <Dashboard />
+ *     </SurfProvider>
+ *   );
+ * }
+ * ```
+ *
+ * @param props - {@link SurfProviderProps}
  */
 export function SurfProvider({ url, auth, channels, endpoint, children }: SurfProviderProps) {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');

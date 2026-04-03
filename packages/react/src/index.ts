@@ -1,3 +1,29 @@
+/**
+ * @packageDocumentation
+ *
+ * React bindings for the Surf Protocol. Provides hooks, a context provider,
+ * and a discovery badge for building Surf-enabled React applications.
+ *
+ * @example
+ * ```tsx
+ * import { SurfProvider, useSurf, useSurfEvent } from '@surfjs/react';
+ *
+ * function App() {
+ *   return (
+ *     <SurfProvider url="wss://myapp.com/surf/ws">
+ *       <Dashboard />
+ *     </SurfProvider>
+ *   );
+ * }
+ *
+ * function Dashboard() {
+ *   const { execute, connected } = useSurf();
+ *   useSurfEvent('data.updated', (data) => console.log(data));
+ *   // ...
+ * }
+ * ```
+ */
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 export { SurfProvider } from './provider.js';

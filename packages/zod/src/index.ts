@@ -1,3 +1,26 @@
+/**
+ * @packageDocumentation
+ *
+ * Zod integration for the Surf Protocol. Define commands with Zod schemas
+ * for automatic parameter validation and type inference.
+ *
+ * Supports both Zod 3 and Zod 4 via duck-typing (no version-specific imports).
+ *
+ * @example
+ * ```ts
+ * import { z } from 'zod';
+ * import { defineZodCommand, zodValidator } from '@surfjs/zod';
+ *
+ * const search = defineZodCommand({
+ *   description: 'Search products',
+ *   params: z.object({
+ *     query: z.string(),
+ *     limit: z.number().optional().default(20),
+ *   }),
+ *   run: async ({ query, limit }) => ({ results: [] }),
+ * });
+ * ```
+ */
 import type {
   CommandDefinition,
   CommandHints,

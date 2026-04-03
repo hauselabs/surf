@@ -7,7 +7,24 @@ import { registerCommand } from '@surfjs/web';
 import type { CommandConfig } from '@surfjs/web';
 
 /**
- * Access the Surf context. Throws if used outside SurfProvider.
+ * Access the Surf context. Throws if used outside `<SurfProvider>`.
+ *
+ * @returns The {@link SurfContextValue} with execute, status, and subscription helpers
+ * @throws Error if called outside a `<SurfProvider>`
+ *
+ * @example
+ * ```tsx
+ * function Dashboard() {
+ *   const { execute, connected, status } = useSurf();
+ *
+ *   const handleRefresh = async () => {
+ *     const result = await execute('dashboard.refresh');
+ *     console.log(result);
+ *   };
+ *
+ *   return <button onClick={handleRefresh} disabled={!connected}>Refresh</button>;
+ * }
+ * ```
  */
 export function useSurf(): SurfContextValue {
   const ctx = useContext(SurfContext);
@@ -20,8 +37,19 @@ export function useSurf(): SurfContextValue {
 /**
  * Subscribe to a Surf event. Automatically cleans up on unmount.
  *
- * @param event - Event name to subscribe to (e.g. 'timeline.updated')
+ * @param event - Event name to subscribe to (e.g. `'timeline.updated'`, `'surf:state'`)
  * @param callback - Called when the event fires
+ *
+ * @example
+ * ```tsx
+ * function Notifications() {
+ *   useSurfEvent('notification.new', (data) => {
+ *     console.log('New notification:', data);
+ *   });
+ *
+ *   return <div>Listening for notifications...</div>;
+ * }
+ * ```
  */
 export function useSurfEvent(event: string, callback: EventCallback): void {
   const ctx = useContext(SurfContext);
@@ -50,9 +78,23 @@ export interface SurfChannelControls {
 }
 
 /**
- * Manage channel subscriptions dynamically.
+ * Manage Surf Live channel subscriptions dynamically.
  *
- * @returns Object with subscribe/unsubscribe functions and current channels set.
+ * @returns {@link SurfChannelControls} with subscribe/unsubscribe functions and current channels set
+ *
+ * @example
+ * ```tsx
+ * function ChatRoom({ roomId }: { roomId: string }) {
+ *   const { subscribe, unsubscribe, channels } = useSurfChannel();
+ *
+ *   useEffect(() => {
+ *     subscribe(`room:${roomId}`);
+ *     return () => unsubscribe(`room:${roomId}`);
+ *   }, [roomId]);
+ *
+ *   return <div>Subscribed to {channels.size} channels</div>;
+ * }
+ * ```
  */
 export function useSurfChannel(): SurfChannelControls {
   const ctx = useSurf();
@@ -85,11 +127,27 @@ interface PatchEventData {
  * Synced state hook that auto-updates from Surf Live broadcast events.
  *
  * Listens for `surf:state` events and updates local state when received.
- * Also supports `surf:patch` events for incremental updates (deep merge).
+ * Also supports `surf:patch` events for incremental updates via deep merge.
+ * Version numbers prevent out-of-order updates.
  *
- * @param key - Optional key to filter state events (matches against channel name)
- * @param initialState - Initial state value
- * @returns [state, setState] tuple — state updates automatically from server
+ * @typeParam T - The state shape
+ * @param key - Channel name to filter state events against
+ * @param initialState - Initial state value before any server updates
+ * @returns `[state, setState]` tuple — state auto-updates from server, but can also be set locally
+ *
+ * @example
+ * ```tsx
+ * function ScoreBoard() {
+ *   const [scores, setScores] = useSurfState('game:scores', { home: 0, away: 0 });
+ *
+ *   return (
+ *     <div>
+ *       <span>Home: {scores.home}</span>
+ *       <span>Away: {scores.away}</span>
+ *     </div>
+ *   );
+ * }
+ * ```
  */
 export function useSurfState<T>(key: string, initialState: T): [T, (value: T | ((prev: T) => T)) => void] {
   const [state, setState] = useState<T>(initialState);

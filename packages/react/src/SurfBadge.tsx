@@ -6,22 +6,55 @@ import { registerWindowSurfHttp } from './window-surf.js'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * Describes a single command displayed in the {@link SurfBadge} info panel.
+ *
+ * @example
+ * ```ts
+ * const cmd: SurfBadgeCommand = {
+ *   name: 'search',
+ *   description: 'Search products',
+ *   params: { query: { type: 'string', required: true } },
+ * };
+ * ```
+ */
 export interface SurfBadgeCommand {
+  /** The command name as registered in the Surf manifest. */
   name: string
+  /** Human-readable description shown in the badge tooltip. */
   description?: string
+  /** Parameter definitions for documentation purposes. */
   params?: Record<string, { type?: string; required?: boolean; description?: string }>
 }
 
+/**
+ * Props for the {@link SurfBadge} component.
+ *
+ * @example
+ * ```tsx
+ * <SurfBadge
+ *   endpoint="https://myapp.com"
+ *   name="My App"
+ *   commands={[{ name: 'search', description: 'Search products' }]}
+ *   position="bottom-left"
+ *   theme="auto"
+ * />
+ * ```
+ */
 export interface SurfBadgeProps {
+  /** The Surf API endpoint URL (e.g. `"https://myapp.com"`). */
   endpoint: string
+  /** Display name for the application. */
   name?: string
+  /** Short description of the application. */
   description?: string
+  /** Commands to display in the badge info panel. */
   commands?: SurfBadgeCommand[]
-  /** Badge placement (default: bottom-left to avoid conflict with chat widgets) */
+  /** Badge placement (default: `'bottom-left'` to avoid conflict with chat widgets). */
   position?: 'bottom-right' | 'bottom-left' | 'inline'
-  /** Force dark or light mode (auto-detects by default) */
+  /** Force dark or light mode (auto-detects from page theme by default). */
   theme?: 'dark' | 'light' | 'auto'
-  /** Custom className */
+  /** Custom CSS class name applied to the badge container. */
   className?: string
 }
 
@@ -157,6 +190,34 @@ function Seal({ size, dark, endpoint, commandCount }: {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+/**
+ * A floating badge that signals AI agents can interact with this site via Surf Protocol.
+ *
+ * Renders a decorative seal with an expandable info panel showing available commands.
+ * Includes hidden machine-readable context (`data-surf-*` attributes) for agent discovery.
+ * Auto-registers `window.surf` when no `<SurfProvider>` is present.
+ *
+ * @example
+ * ```tsx
+ * import { SurfBadge } from '@surfjs/react';
+ *
+ * export default function Layout({ children }) {
+ *   return (
+ *     <>
+ *       {children}
+ *       <SurfBadge
+ *         endpoint="https://myapp.com"
+ *         name="My App"
+ *         commands={[
+ *           { name: 'search', description: 'Search products' },
+ *           { name: 'getProduct', description: 'Get product details' },
+ *         ]}
+ *       />
+ *     </>
+ *   );
+ * }
+ * ```
+ */
 export function SurfBadge({
   endpoint,
   name,

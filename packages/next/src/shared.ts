@@ -41,7 +41,17 @@ export const CORS_HEADERS: Record<string, string> = {
 /**
  * Safely extract a `sessionId` string from an unknown request body.
  *
- * Returns the sessionId string if present and string-typed, otherwise undefined.
+ * @param body - The parsed request body (may be any shape)
+ * @returns The sessionId string if present and string-typed, otherwise `undefined`
+ *
+ * @example
+ * ```ts
+ * const sid = extractSessionId({ sessionId: 'abc-123' });
+ * // sid === 'abc-123'
+ *
+ * const none = extractSessionId({ other: 'field' });
+ * // none === undefined
+ * ```
  */
 export function extractSessionId(body: unknown): string | undefined {
   if (typeof body !== 'object' || body === null) return undefined;
