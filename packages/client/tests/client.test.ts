@@ -192,4 +192,136 @@ describe('SurfClient', () => {
     );
     expect(executeCalls).toHaveLength(2);
   });
+
+  it('cache uses LRU eviction, not FIFO', async () => {
+    // Manifest with 4 commands so we can test eviction ordering
+    const lruManifest: SurfManifest = {
+      ...testManifest,
+      commands: {
+        cmd_a: { description: 'A' },
+        cmd_b: { description: 'B' },
+        cmd_c: { description: 'C' },
+        cmd_d: { description: 'D' },
+      },
+    };
+
+    const mockFetch = createMockFetch({
+      cmd_a: 'result_a',
+      cmd_b: 'result_b',
+      cmd_c: 'result_c',
+      cmd_d: 'result_d',
+    });
+
+    const client = SurfClient.fromManifest(lruManifest, {
+      baseUrl: 'http://localhost:3000',
+      fetch: mockFetch,
+      cache: { ttlMs: 60000, maxSize: 3 },
+    });
+
+    // Fill cache: A, B, C (cache is now at maxSize 3)
+    await client.execute('cmd_a');
+    await client.execute('cmd_b');
+    await client.execute('cmd_c');
+
+    // Access A again — promotes it in LRU order
+    await client.execute('cmd_a'); // should be cached, no new fetch
+
+    // Insert D — should evict B (least recently used), NOT A (which was just accessed)
+    await client.execute('cmd_d');
+
+    // Reset mock call count to isolate the next calls
+    mockFetch.mockClear();
+
+    // Re-create the mock to still return correct responses
+    mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      const path = new URL(url).pathname;
+      if (path === '/surf/execute') {
+        const body = JSON.parse((init?.body as string) ?? '{}');
+        const responses: Record<string, string> = {
+          cmd_a: 'result_a',
+          cmd_b: 'result_b',
+          cmd_c: 'result_c',
+          cmd_d: 'result_d',
+        };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, result: responses[body.command] }),
+        };
+      }
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
+    // A should still be cached (was promoted via LRU)
+    await client.execute('cmd_a');
+    const aFetches = mockFetch.mock.calls.filter(
+      (c: unknown[]) => (c[0] as string).includes('/surf/execute'),
+    );
+    expect(aFetches).toHaveLength(0); // A is in cache
+
+    // B should have been evicted (it was the LRU entry)
+    await client.execute('cmd_b');
+    const bFetches = mockFetch.mock.calls.filter(
+      (c: unknown[]) => {
+        if (!(c[0] as string).includes('/surf/execute')) return false;
+        const body = JSON.parse((c[1] as { body: string })?.body ?? '{}');
+        return body.command === 'cmd_b';
+      },
+    );
+    expect(bFetches).toHaveLength(1); // B was evicted, needs re-fetch
+  });
+
+  it('cache evicts oldest entry when no LRU promotion occurs', async () => {
+    const lruManifest: SurfManifest = {
+      ...testManifest,
+      commands: {
+        cmd_x: { description: 'X' },
+        cmd_y: { description: 'Y' },
+        cmd_z: { description: 'Z' },
+      },
+    };
+
+    const mockFetch = createMockFetch({
+      cmd_x: 'result_x',
+      cmd_y: 'result_y',
+      cmd_z: 'result_z',
+    });
+
+    const client = SurfClient.fromManifest(lruManifest, {
+      baseUrl: 'http://localhost:3000',
+      fetch: mockFetch,
+      cache: { ttlMs: 60000, maxSize: 2 },
+    });
+
+    // Fill cache: X, Y (maxSize 2)
+    await client.execute('cmd_x');
+    await client.execute('cmd_y');
+
+    // Insert Z — should evict X (oldest, no promotion happened)
+    await client.execute('cmd_z');
+
+    // Count total execute calls so far: X, Y, Z = 3
+    const preFetches = mockFetch.mock.calls.filter(
+      (c: unknown[]) => (c[0] as string).includes('/surf/execute'),
+    );
+    expect(preFetches).toHaveLength(3);
+
+    // Y should still be cached (second most recent)
+    await client.execute('cmd_y');
+    // Z should still be cached (most recent)
+    await client.execute('cmd_z');
+
+    // No new fetches — both Y and Z were in cache
+    const postFetches = mockFetch.mock.calls.filter(
+      (c: unknown[]) => (c[0] as string).includes('/surf/execute'),
+    );
+    expect(postFetches).toHaveLength(3); // unchanged
+
+    // X should be evicted — needs a re-fetch
+    await client.execute('cmd_x');
+    const finalFetches = mockFetch.mock.calls.filter(
+      (c: unknown[]) => (c[0] as string).includes('/surf/execute'),
+    );
+    expect(finalFetches).toHaveLength(4); // one new fetch for evicted X
+  });
 });

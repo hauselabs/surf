@@ -78,6 +78,9 @@ class ResponseCache {
       this.store.delete(k);
       return undefined;
     }
+    // LRU promotion: move to end of Map so it's evicted last
+    this.store.delete(k);
+    this.store.set(k, entry);
     return entry.result;
   }
 
