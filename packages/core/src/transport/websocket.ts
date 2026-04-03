@@ -63,7 +63,7 @@ export function attachWebSocket(
   const liveEnabled = live?.enabled === true;
   const maxChannels = live?.maxChannelsPerConnection ?? 10;
   const pingIntervalMs = options.pingInterval ?? 30000;
-  const pongTimeoutMs = options.pongTimeout ?? 10000;
+  const _pongTimeoutMs = options.pongTimeout ?? 10000;
 
   // Track all active connections for graceful shutdown
   const activeConnections = new Set<WebSocketLike>();

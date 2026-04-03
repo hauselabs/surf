@@ -1,14 +1,12 @@
 import {
   defineComponent,
   ref,
-  computed,
   onMounted,
   onUnmounted,
   inject,
   h,
   type PropType,
 } from 'vue';
-import { initSurf, ensureSurf } from '@surfjs/web';
 import {
   registerWindowSurfHttp,
 } from './window-surf.js';

@@ -112,21 +112,20 @@ export class WebSocketTransport {
   }
 
   private async doConnect(url: string, auth?: string): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      // Try browser WebSocket first, then Node ws
-      const WsConstructor = typeof WebSocket !== 'undefined'
-        ? WebSocket
-        : await this.getNodeWsAsync();
+    // Resolve WebSocket constructor before creating the promise
+    const WsConstructor = typeof WebSocket !== 'undefined'
+      ? WebSocket
+      : await this.getNodeWsAsync();
 
-      if (!WsConstructor) {
-        this.setState('disconnected');
-        reject(new SurfClientError(
-          'WebSocket not available. Install "ws" package for Node.js.',
-          'NOT_SUPPORTED',
-        ));
-        return;
-      }
+    if (!WsConstructor) {
+      this.setState('disconnected');
+      throw new SurfClientError(
+        'WebSocket not available. Install "ws" package for Node.js.',
+        'NOT_SUPPORTED',
+      );
+    }
 
+    return new Promise((resolve, reject) => {
       const ws = new WsConstructor(url) as unknown as WebSocketLike;
       this.ws = ws;
 

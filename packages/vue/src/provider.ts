@@ -7,7 +7,6 @@ import {
   onUnmounted,
   type InjectionKey,
   type PropType,
-  h,
 } from 'vue';
 import {
   ensureSurf,

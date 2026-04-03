@@ -4,7 +4,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { SurfContext, type SurfContextValue, type EventCallback } from './context.js';
 import { deepMerge } from './deepMerge.js';
 import { registerCommand } from '@surfjs/web';
-import type { LocalHandlerMode, LocalHandler, CommandConfig } from '@surfjs/web';
+import type { CommandConfig } from '@surfjs/web';
 
 /**
  * Access the Surf context. Throws if used outside SurfProvider.

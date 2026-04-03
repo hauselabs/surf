@@ -1,4 +1,4 @@
-import type { CommandDefinition, SurfManifest } from '../types.js';
+import type { SurfManifest } from '../types.js';
 import type { CommandRegistry } from '../commands.js';
 import type { EventBus } from '../events.js';
 
@@ -8,8 +8,8 @@ import type { EventBus } from '../events.js';
  */
 export function generateBrowserScript(
   manifest: SurfManifest,
-  registry: CommandRegistry,
-  events: EventBus,
+  _registry: CommandRegistry,
+  _events: EventBus,
 ): string {
   // We serialize the manifest and create a lightweight runtime.
   // The actual command execution happens via postMessage to the host page.
@@ -97,8 +97,8 @@ export function generateBrowserScript(
  * the CustomEvent bridge to actual command execution.
  */
 export function createWindowBridge(
-  registry: CommandRegistry,
-  events: EventBus,
+  _registry: CommandRegistry,
+  _events: EventBus,
 ): string {
   return `
 (function() {

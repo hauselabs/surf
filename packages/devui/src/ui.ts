@@ -12,7 +12,7 @@ export interface HtmlOptions {
  * Scandinavian minimalism: Inter font, clean lines, generous whitespace.
  */
 export function generateHtml(options: HtmlOptions): string {
-  const { title, manifest, manifestPath, executePath } = options;
+  const { title, manifest, manifestPath: _manifestPath, executePath } = options;
   const manifestJson = JSON.stringify(manifest);
 
   return `<!DOCTYPE html>
