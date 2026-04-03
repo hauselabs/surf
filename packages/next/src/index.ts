@@ -175,6 +175,23 @@ export function createSurfRouteHandler(
       }
 
       const command = registry.get(body.command);
+
+      // Reject browser-only commands called via server-side handler
+      if (command?.hints?.execution === 'browser') {
+        return jsonResponse(
+          {
+            ok: false,
+            error: {
+              code: 'NOT_SUPPORTED',
+              message: 'This command requires browser execution via window.surf',
+            },
+          },
+          501,
+          undefined,
+          request,
+        );
+      }
+
       const wantsStream = body.stream === true && command?.stream === true;
 
       if (wantsStream) {

@@ -44,6 +44,11 @@ async function createTestSurf(): Promise<SurfInstance> {
           return 'stream-done';
         },
       },
+      browserOnly: {
+        description: 'Browser-only command',
+        hints: { execution: 'browser' as const },
+        run: async () => 'should not run on server',
+      },
     },
   });
 }
@@ -468,6 +473,21 @@ describe('App Router — createSurfRouteHandler', () => {
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
     });
 
+    it('rejects browser-only commands with 501 NOT_SUPPORTED', async () => {
+      const req = makeRequest('http://localhost/api/surf/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'browserOnly', params: {} }),
+      });
+      const res = await POST(req, makeContext(['execute']));
+
+      expect(res.status).toBe(501);
+      const body = await res.json();
+      expect(body.ok).toBe(false);
+      expect(body.error.code).toBe('NOT_SUPPORTED');
+      expect(body.error.message).toContain('browser execution');
+    });
+
     it('returns SSE stream when stream=true and command supports it', async () => {
       const req = makeRequest('http://localhost/api/surf/execute', {
         method: 'POST',
@@ -800,6 +820,27 @@ describe('Pages Router — createSurfApiHandler', () => {
       );
 
       expect(res._statusCode).toBe(200);
+    });
+
+    it('rejects browser-only commands with 501 NOT_SUPPORTED', async () => {
+      const res = createMockPagesRes();
+      await handler(
+        {
+          method: 'POST',
+          url: '/api/surf/execute',
+          headers: {},
+          query: { slug: ['execute'] },
+          body: { command: 'browserOnly', params: {} },
+        },
+        res,
+      );
+
+      expect(res._statusCode).toBe(501);
+      const body = res._body as Record<string, unknown>;
+      expect(body['ok']).toBe(false);
+      const error = body['error'] as Record<string, unknown>;
+      expect(error['code']).toBe('NOT_SUPPORTED');
+      expect(error['message']).toContain('browser execution');
     });
 
     it('handles streaming for Pages Router', async () => {
