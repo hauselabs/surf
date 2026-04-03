@@ -120,6 +120,7 @@ export { RateLimiter } from './ratelimit.js';
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 export { validateParams, validateResult } from './validation.js';
+export type { ValidateParamsOptions } from './validation.js';
 
 // ─── Pipeline ─────────────────────────────────────────────────────────────────
 

@@ -84,9 +84,11 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
   }
 
   const validateReturns = config.strict === true || config.validateReturns === true;
+  const strictParams = config.strict === true || config.strictParams === true;
   const debug = config.debug === true;
   const registry = new CommandRegistry(config.commands, {
     validateReturns,
+    strictParams,
     globalRateLimit: config.rateLimit,
     debug,
   });

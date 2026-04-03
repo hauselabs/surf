@@ -124,6 +124,8 @@ export interface CommandDefinition<TParams = Record<string, unknown>, TResult = 
   paginated?: boolean | PaginationConfig;
   /** Required auth scopes. Token must have ALL listed scopes. Only checked when auth is 'required' or 'optional' (with token). */
   requiredScopes?: string[];
+  /** Reject requests that include params not defined in the command schema. Overrides the global `strictParams` setting. */
+  strictParams?: boolean;
   run: CommandHandler<TParams, TResult>;
 }
 
@@ -286,7 +288,9 @@ export interface SurfConfig {
   rateLimit?: RateLimitConfig;
   /** Validate command return values against their declared `returns` schema. */
   validateReturns?: boolean;
-  /** Strict mode — enables validateReturns and other strict checks. */
+  /** Reject requests that include params not defined in the command schema. Default: `false`. */
+  strictParams?: boolean;
+  /** Strict mode — enables validateReturns, strictParams, and other strict checks. */
   strict?: boolean;
   /** Enable debug mode — exposes detailed error messages. Disable in production. */
   debug?: boolean;

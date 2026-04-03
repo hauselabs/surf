@@ -1,6 +1,11 @@
 import type { ParamSchema, ParamType } from './types.js';
 import { invalidParams, internalError } from './errors.js';
 
+export interface ValidateParamsOptions {
+  /** When true, reject parameters not declared in the schema. */
+  strictParams?: boolean;
+}
+
 /**
  * Validates and coerces parameters against a schema.
  * Returns the validated (and defaulted) params object.
@@ -9,9 +14,20 @@ import { invalidParams, internalError } from './errors.js';
 export function validateParams(
   params: Record<string, unknown> | undefined,
   schema: Record<string, ParamSchema>,
+  options?: ValidateParamsOptions,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   const errors: string[] = [];
+
+  // Strict params: reject unexpected keys
+  if (options?.strictParams && params) {
+    const schemaKeys = new Set(Object.keys(schema));
+    for (const key of Object.keys(params)) {
+      if (!schemaKeys.has(key)) {
+        errors.push(`Unexpected parameter '${key}'`);
+      }
+    }
+  }
 
   for (const [name, def] of Object.entries(schema)) {
     const value = params?.[name];
