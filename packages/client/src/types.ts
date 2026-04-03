@@ -20,6 +20,16 @@ export interface CommandHints {
   idempotent?: boolean;
   sideEffects?: boolean;
   estimatedMs?: number;
+  /** Where this command can be executed. `'any'` (default), `'browser'` (client-side only), or `'server'`. */
+  execution?: 'any' | 'browser' | 'server';
+}
+
+/** A concrete example of calling a command, shown to agents in the manifest. */
+export interface CommandExample {
+  /** Human-readable label for this example. */
+  title?: string;
+  params: Record<string, unknown>;
+  result?: unknown;
 }
 
 export interface ManifestCommand {
@@ -27,8 +37,16 @@ export interface ManifestCommand {
   params?: Record<string, ParamSchema>;
   returns?: ParamSchema | TypeRef;
   tags?: string[];
-  auth?: 'none' | 'required' | 'optional';
+  auth?: 'none' | 'required' | 'optional' | 'hidden' | boolean;
   hints?: CommandHints;
+  /** Example request/response pairs — helps agents understand usage. */
+  examples?: CommandExample[];
+  /** Per-command rate limiting. */
+  rateLimit?: { windowMs: number; maxRequests: number };
+  /** Whether this command supports pagination. */
+  paginated?: boolean;
+  /** Required auth scopes — token must have ALL listed scopes. */
+  requiredScopes?: string[];
 }
 
 export interface AuthConfig {

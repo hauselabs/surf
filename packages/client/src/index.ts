@@ -17,6 +17,7 @@ export type {
   ParamType,
   TypeRef,
   CommandHints,
+  CommandExample,
   AuthConfig,
   EventDefinition,
   TypeDefinition,
