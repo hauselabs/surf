@@ -6,13 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [20, 22]
+        node-version: [18, 20, 22]
 
     steps:
       - uses: actions/checkout@v4
@@ -27,23 +32,33 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build @surfjs/core
-        run: pnpm --filter @surfjs/core build
-
-      - name: Typecheck @surfjs/core
-        run: pnpm --filter @surfjs/core typecheck
-
-      - name: Build @surfjs/client
-        run: pnpm --filter @surfjs/client build
-
-      - name: Typecheck @surfjs/client
-        run: pnpm --filter @surfjs/client typecheck
-
-      - name: Build @surfjs/devui
-        run: pnpm --filter @surfjs/devui build
+      - name: Build all packages
+        run: pnpm turbo build
 
       - name: Typecheck all packages
         run: pnpm turbo typecheck
 
       - name: Run tests
         run: pnpm test
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm turbo build
+
+      - name: Lint all packages
+        run: pnpm turbo lint
