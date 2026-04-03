@@ -2,7 +2,7 @@
 
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { SurfContext, type SurfContextValue, type EventCallback } from './context.js';
-import { deepMerge } from './deepMerge.js';
+import { deepMerge } from '@surfjs/web';
 import { registerCommand } from '@surfjs/web';
 import type { CommandConfig } from '@surfjs/web';
 

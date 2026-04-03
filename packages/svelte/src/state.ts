@@ -1,6 +1,6 @@
 import { writable, type Writable } from 'svelte/store';
 import { onDestroy } from 'svelte';
-import { deepMerge } from './deepMerge.js';
+import { deepMerge } from '@surfjs/web';
 import { getSurfContext } from './context.js';
 
 /** Data shape for surf:state events. */

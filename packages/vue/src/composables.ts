@@ -1,7 +1,7 @@
 import { inject, onUnmounted, ref, type Ref } from 'vue';
 import { registerCommand } from '@surfjs/web';
 import type { CommandConfig } from '@surfjs/web';
-import { deepMerge } from './deepMerge.js';
+import { deepMerge } from '@surfjs/web';
 import { SURF_INJECTION_KEY } from './provider.js';
 import type { SurfContextValue, EventCallback } from './types.js';
 
