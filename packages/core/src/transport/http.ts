@@ -1,9 +1,10 @@
-import type { SurfManifest, ExecuteRequest, SurfResponse, HttpHandler } from '../types.js';
+import type { SurfManifest, ExecuteRequest, SurfResponse, HttpHandler, RateLimitConfig } from '../types.js';
 import type { CommandRegistry } from '../commands.js';
 import type { InMemorySessionStore } from '../session.js';
 import type { CorsConfig } from '../cors.js';
 import { resolveCorsHeaders, resolveCorsPreflightHeaders } from '../cors.js';
 import { getErrorStatus } from '../http-status.js';
+import { RateLimiter } from '../ratelimit.js';
 import { executePipeline } from './pipeline.js';
 import { createSseWriter, chunkEvent, doneEvent, errorEvent } from './sse.js';
 
@@ -269,14 +270,54 @@ export function createExecuteHandler(options: HttpTransportOptions): HttpHandler
 
 /**
  * Creates session management handlers.
+ *
+ * When `sessionRateLimit` is provided, the `start` handler enforces
+ * per-IP rate limiting on session creation.  Session creation is expensive
+ * (server-side state allocation), so stricter limits than regular commands
+ * are recommended (e.g. 10 req/min vs 100 req/min).
  */
-export function createSessionHandlers(sessions: InMemorySessionStore, corsConfig?: CorsConfig): {
+export function createSessionHandlers(
+  sessions: InMemorySessionStore,
+  corsConfig?: CorsConfig,
+  sessionRateLimit?: RateLimitConfig,
+): {
   start: HttpHandler;
   end: HttpHandler;
 } {
+  const rateLimiter = sessionRateLimit ? new RateLimiter() : null;
+
   return {
     start: async (req, res) => {
       const cors = resolveCorsHeaders(corsConfig, getHeader(req.headers, 'origin'));
+
+      // Rate limit session creation
+      if (rateLimiter && sessionRateLimit) {
+        const ip = extractIp(req.headers) ?? 'unknown';
+        const key = `session:start:ip:${ip}`;
+        try {
+          rateLimiter.check(sessionRateLimit, key);
+        } catch (err) {
+          const retryAfterMs = (err && typeof err === 'object' && 'details' in err)
+            ? ((err as { details?: Record<string, unknown> }).details?.['retryAfterMs'] as number | undefined) ?? 0
+            : 0;
+          const retryAfter = Math.ceil(retryAfterMs / 1000);
+          res.writeHead(429, {
+            'Content-Type': 'application/json',
+            ...cors,
+            ...(retryAfter > 0 ? { 'Retry-After': String(retryAfter) } : {}),
+          });
+          res.end(JSON.stringify({
+            ok: false,
+            error: {
+              code: 'RATE_LIMITED',
+              message: 'Too many session creation requests',
+              details: retryAfterMs > 0 ? { retryAfterMs } : undefined,
+            },
+          }));
+          return;
+        }
+      }
+
       const session = await sessions.create();
       res.writeHead(200, { 'Content-Type': 'application/json', ...cors });
       res.end(JSON.stringify({ ok: true, sessionId: session.id }));

@@ -183,6 +183,109 @@ describe('HTTP Transport', () => {
     expect(res.headers['Access-Control-Allow-Origin']).toBe('*');
   });
 
+  it('session start handler returns 429 when rate limited', async () => {
+    const app = await createSurf({
+      name: 'TestApp',
+      version: '1.0.0',
+      commands: {
+        ping: { description: 'Ping', run: async () => 'pong' },
+      },
+      sessionRateLimit: { windowMs: 60000, maxRequests: 2, keyBy: 'ip' },
+    });
+    const mw = app.middleware();
+
+    // First two session starts should succeed
+    const res1 = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '1.2.3.4' }), res1);
+    expect(res1.statusCode).toBe(200);
+    expect(res1.json().ok).toBe(true);
+    expect(res1.json().sessionId).toBeDefined();
+
+    const res2 = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '1.2.3.4' }), res2);
+    expect(res2.statusCode).toBe(200);
+
+    // Third should be rate limited
+    const res3 = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '1.2.3.4' }), res3);
+    expect(res3.statusCode).toBe(429);
+    const data = res3.json();
+    expect(data.ok).toBe(false);
+    expect(data.error.code).toBe('RATE_LIMITED');
+    expect(res3.headers['Retry-After']).toBeDefined();
+  });
+
+  it('session rate limit is per-IP — different IPs have separate limits', async () => {
+    const app = await createSurf({
+      name: 'TestApp',
+      version: '1.0.0',
+      commands: {
+        ping: { description: 'Ping', run: async () => 'pong' },
+      },
+      sessionRateLimit: { windowMs: 60000, maxRequests: 1, keyBy: 'ip' },
+    });
+    const mw = app.middleware();
+
+    // IP A — first request succeeds
+    const res1 = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '10.0.0.1' }), res1);
+    expect(res1.statusCode).toBe(200);
+
+    // IP A — second request rate limited
+    const res2 = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '10.0.0.1' }), res2);
+    expect(res2.statusCode).toBe(429);
+
+    // IP B — first request succeeds (separate limit)
+    const res3 = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '10.0.0.2' }), res3);
+    expect(res3.statusCode).toBe(200);
+  });
+
+  it('session rate limit auto-derives from global rateLimit config', async () => {
+    const app = await createSurf({
+      name: 'TestApp',
+      version: '1.0.0',
+      commands: {
+        ping: { description: 'Ping', run: async () => 'pong' },
+      },
+      rateLimit: { windowMs: 60000, maxRequests: 100 },
+      // No explicit sessionRateLimit — should auto-derive 10 req/60s per IP
+    });
+    const mw = app.middleware();
+
+    // Should allow up to 10 session starts (auto-derived limit)
+    for (let i = 0; i < 10; i++) {
+      const res = mockRes();
+      await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '1.2.3.4' }), res);
+      expect(res.statusCode).toBe(200);
+    }
+
+    // 11th should be rate limited
+    const res = mockRes();
+    await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '1.2.3.4' }), res);
+    expect(res.statusCode).toBe(429);
+  });
+
+  it('no session rate limit when no rateLimit configured', async () => {
+    const app = await createSurf({
+      name: 'TestApp',
+      version: '1.0.0',
+      commands: {
+        ping: { description: 'Ping', run: async () => 'pong' },
+      },
+      // No rateLimit, no sessionRateLimit
+    });
+    const mw = app.middleware();
+
+    // Should allow unlimited session starts
+    for (let i = 0; i < 20; i++) {
+      const res = mockRes();
+      await mw(mockReq('POST', '/surf/session/start', {}, { 'x-forwarded-for': '1.2.3.4' }), res);
+      expect(res.statusCode).toBe(200);
+    }
+  });
+
   it('middleware handler routes to correct endpoints', async () => {
     const app = await createTestApp();
     const mw = app.middleware();

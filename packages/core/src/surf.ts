@@ -133,7 +133,13 @@ export async function createSurf(config: SurfConfig): Promise<SurfInstance> {
     corsConfig: config.cors,
   });
 
-  const sessionHandlers = createSessionHandlers(sessionStore, config.cors);
+  // Derive session rate limit: explicit config > auto-derive from global rateLimit > none
+  const sessionRateLimit = config.sessionRateLimit
+    ?? (config.rateLimit
+      ? { windowMs: 60_000, maxRequests: 10, keyBy: 'ip' as const }
+      : undefined);
+
+  const sessionHandlers = createSessionHandlers(sessionStore, config.cors, sessionRateLimit);
 
   return {
     use(mw: SurfMiddleware) {

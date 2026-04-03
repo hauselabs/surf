@@ -286,6 +286,8 @@ export interface SurfConfig {
   authVerifier?: import('./auth.js').AuthVerifier;
   /** Global rate limit applied to all commands (per-command config overrides this). */
   rateLimit?: RateLimitConfig;
+  /** Rate limit for session creation (POST /surf/session/start). Defaults to 10 requests per 60s per IP when `rateLimit` is set. */
+  sessionRateLimit?: RateLimitConfig;
   /** Validate command return values against their declared `returns` schema. */
   validateReturns?: boolean;
   /** Reject requests that include params not defined in the command schema. Default: `false`. */
