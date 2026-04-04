@@ -35,6 +35,12 @@ interface FastifyInstance {
   options(path: string, handler: FastifyRouteHandler): void;
   get(path: string, handler: FastifyRouteHandler): void;
   post(path: string, handler: FastifyRouteHandler): void;
+  /** Register a custom content-type parser. */
+  addContentTypeParser?: (
+    contentType: string,
+    opts: { parseAs: string },
+    parser: (req: unknown, body: string, done: (err: Error | null, result?: unknown) => void) => void,
+  ) => void;
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -48,7 +54,7 @@ interface FastifyInstance {
  * import { createSurf } from '@surfjs/core'
  * import { fastifyPlugin } from '@surfjs/core/fastify'
  *
- * const surf = createSurf({ ... })
+ * const surf = await createSurf({ ... })
  * const app = Fastify()
  * app.register(fastifyPlugin(surf))
  * ```
@@ -85,6 +91,21 @@ export function fastifyPlugin(surf: SurfInstance) {
   }
 
   return async function surfPlugin(fastify: FastifyInstance) {
+    // ─── Empty-body-safe JSON parser ───────────────────────────────────
+    // Fastify rejects empty JSON bodies (FST_ERR_CTP_EMPTY_JSON_BODY) by default.
+    // Override the parser to treat empty bodies as `{}` since some Surf routes
+    // (e.g. session/start) don't require a body.
+    if (fastify.addContentTypeParser) {
+      fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+        try {
+          const trimmed = body.trim();
+          done(null, trimmed === '' ? {} : JSON.parse(trimmed));
+        } catch (e) {
+          done(e instanceof Error ? e : new Error('Invalid JSON body'));
+        }
+      });
+    }
+
     // ─── OPTIONS (CORS preflight) ──────────────────────────────────────
     const optionsRoutes = [
       '/.well-known/surf.json',

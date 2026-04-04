@@ -52,8 +52,11 @@ export interface InitSurfOptions {
 
 /** Configuration for a command handler passed to registerCommand(). */
 export interface CommandConfig {
-  /** Execution mode: 'local' (browser only) or 'sync' (local + server background sync). */
-  mode: LocalHandlerMode;
+  /**
+   * Execution mode: 'local' (browser only) or 'sync' (local + server background sync).
+   * Defaults to `'local'` if omitted.
+   */
+  mode?: LocalHandlerMode;
   /** The handler function that executes the command locally. */
   run: LocalHandler;
 }

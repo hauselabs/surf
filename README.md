@@ -239,7 +239,7 @@ Hono also exports `honoMiddleware(surf)` which returns a fetch handler for Cloud
 
 ```ts
 import { honoMiddleware } from '@surfjs/core/hono';
-export default { fetch: honoMiddleware(surf) };
+export default { fetch: await honoMiddleware(surf) };
 ```
 
 ### Next.js (App Router)

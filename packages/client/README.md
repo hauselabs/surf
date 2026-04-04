@@ -85,7 +85,11 @@ Get a specific command definition.
 
 Execute a command via HTTP. Respects retry and cache configuration.
 
+**Note:** The server returns `{ ok: true, result: <data> }` but `execute()` unwraps the envelope and returns `<data>` directly. Errors throw a `SurfClientError` instead of returning `{ ok: false, error }`. This is by design — the SDK provides a clean calling convention while the protocol uses an envelope for transport.
+
 ```ts
+// Server responds: { ok: true, result: [{ name: "Shoes", price: 99 }] }
+// execute() returns: [{ name: "Shoes", price: 99 }]
 const products = await client.execute('search', { query: 'shoes', maxPrice: 100 });
 ```
 

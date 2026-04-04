@@ -81,6 +81,8 @@ export interface ParsedArgs {
   verbose: boolean;
   /** Override the execute endpoint path. Default: '/surf/execute'. */
   basePath: string | undefined;
+  /** JSON string of all args (skips interactive prompting). */
+  args: string | undefined;
 }
 
 export function parseArgs(argv: string[]): ParsedArgs {
@@ -92,6 +94,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let auth: string | undefined;
   let verbose = false;
   let basePath: string | undefined;
+  let args: string | undefined;
 
   let i = command === 'test' ? 3 : 2;
   while (i < argv.length) {
@@ -109,6 +112,9 @@ export function parseArgs(argv: string[]): ParsedArgs {
     } else if ((arg === '--base-path' || arg === '--basePath') && i + 1 < argv.length) {
       basePath = argv[i + 1] as string; // bounds-checked above
       i += 2;
+    } else if (arg === '--args' && i + 1 < argv.length) {
+      args = argv[i + 1] as string; // bounds-checked above
+      i += 2;
     } else if (arg.startsWith('--') && i + 1 < argv.length) {
       const key = arg.slice(2);
       params[key] = argv[i + 1] as string; // bounds-checked above
@@ -118,7 +124,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     }
   }
 
-  return { command, url, subcommand, params, json, auth, verbose, basePath };
+  return { command, url, subcommand, params, json, auth, verbose, basePath, args };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -229,7 +235,11 @@ export async function inspect(siteUrl: string, opts: ParsedArgs): Promise<void> 
     }
 
     console.log();
-    console.log(`${c.bold}${c.cyan}🏄 ${manifest.name || 'Unknown'}${c.reset} ${c.dim}(Surf v${manifest.surf || '?'})${c.reset}`);
+    const versionParts: string[] = [];
+    if (manifest.version) versionParts.push(`v${manifest.version}`);
+    if (manifest.surf) versionParts.push(`Surf protocol ${manifest.surf}`);
+    const versionStr = versionParts.length > 0 ? ` ${c.dim}(${versionParts.join(' · ')})${c.reset}` : '';
+    console.log(`${c.bold}${c.cyan}🏄 ${manifest.name || 'Unknown'}${c.reset}${versionStr}`);
     if (manifest.description) console.log(`${c.dim}   ${manifest.description}${c.reset}`);
     console.log();
 
@@ -358,7 +368,27 @@ export async function test(siteUrl: string, commandName: string, opts: ParsedArg
   const paramSchemas = cmdSchema.params || {};
   const resolvedParams: Record<string, unknown> = {};
 
-  // Copy provided params
+  // If --args is provided, parse it as JSON and use directly (skip prompting)
+  if (opts.args) {
+    try {
+      const parsed = JSON.parse(opts.args) as Record<string, unknown>;
+      for (const [key, value] of Object.entries(parsed)) {
+        resolvedParams[key] = value;
+      }
+    } catch {
+      const msg = 'Invalid JSON in --args flag';
+      if (opts.json) {
+        console.log(JSON.stringify({ ok: false, error: msg }));
+        process.exit(1);
+        return;
+      }
+      console.log(`${c.red}❌ ${msg}${c.reset}`);
+      process.exit(1);
+      return;
+    }
+  }
+
+  // Copy provided --key value params (these override --args values)
   for (const [key, value] of Object.entries(opts.params)) {
     const schema = paramSchemas[key]; // may be undefined if not in manifest
     if (schema !== undefined) {
@@ -375,9 +405,23 @@ export async function test(siteUrl: string, commandName: string, opts: ParsedArg
     }
   }
 
-  // 4. Prompt for missing required params
+  // 4. Prompt for missing required params (skip if --args was provided)
   const missingRequired = Object.entries(paramSchemas)
     .filter(([key, schema]) => schema.required && !(key in resolvedParams));
+
+  if (missingRequired.length > 0 && opts.args) {
+    // --args was provided but required params are still missing — fail without prompting
+    const missing = missingRequired.map(([k]) => k);
+    const msg = `Missing required params: ${missing.join(', ')}`;
+    if (opts.json) {
+      console.log(JSON.stringify({ ok: false, error: msg }));
+      process.exit(1);
+      return;
+    }
+    console.log(`${c.red}❌ ${msg}${c.reset}`);
+    process.exit(1);
+    return;
+  }
 
   if (missingRequired.length > 0 && !opts.json) {
     console.log();
@@ -504,6 +548,7 @@ ${c.bold}Flags:${c.reset}
   --json              Machine-readable JSON output
   --auth <token>      Bearer token for authenticated commands
   --verbose           Show full parameter schemas ${c.dim}(inspect)${c.reset}
+  --args <json>       Provide all params as JSON ${c.dim}(test — skips prompting)${c.reset}
 
 ${c.bold}Examples:${c.reset}
   surf inspect https://acme-store.com

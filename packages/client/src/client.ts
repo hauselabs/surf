@@ -333,13 +333,20 @@ export class SurfClient {
    * Automatically applies response caching (for commands without side effects)
    * and retries (for transient failures) when configured.
    *
+   * **Note:** The server returns `{ ok: true, result: <data> }` but this method
+   * unwraps the envelope and returns `<data>` directly for convenience. On errors,
+   * a {@link SurfClientError} is thrown instead of returning `{ ok: false, error }`.
+   * If you need the raw server envelope, use the lower-level HTTP transport directly.
+   *
    * @param command - The command name to execute.
    * @param params - Optional parameters for the command.
-   * @returns The command result.
+   * @returns The unwrapped command result (the `result` field from the server response).
    * @throws {@link SurfClientError} on transport or application errors.
    *
    * @example
    * ```ts
+   * // Server responds: { ok: true, result: [{ name: 'Shoes', price: 99 }] }
+   * // client.execute() returns: [{ name: 'Shoes', price: 99 }]
    * const results = await client.execute('search', { query: 'shoes', limit: 10 });
    * ```
    */

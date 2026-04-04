@@ -55,9 +55,9 @@ interface HonoModule {
  * import { createSurf } from '@surfjs/core'
  * import { honoApp } from '@surfjs/core/hono'
  *
- * const surf = createSurf({ ... })
+ * const surf = await createSurf({ ... })
  * const app = new Hono()
- * app.route('/', honoApp(surf))
+ * app.route('/', await honoApp(surf))
  * ```
  */
 function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
@@ -332,7 +332,7 @@ export function honoAppSync(surf: SurfInstance, HonoCtor: HonoConstructor): Hono
  *
  * Usage:
  * ```ts
- * export default { fetch: honoMiddleware(surf) }
+ * export default { fetch: await honoMiddleware(surf) }
  * ```
  */
 export async function honoMiddleware(surf: SurfInstance): Promise<(request: Request, env?: unknown, ctx?: unknown) => Response | Promise<Response>> {

@@ -209,7 +209,7 @@ export function registerCommand(name: string, config: CommandConfig): () => void
     initSurf();
   }
 
-  localHandlers.set(name, { handler: config.run, mode: config.mode });
+  localHandlers.set(name, { handler: config.run, mode: config.mode ?? 'local' });
 
   return () => {
     const current = localHandlers.get(name);
