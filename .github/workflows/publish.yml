@@ -32,21 +32,51 @@ jobs:
         run: pnpm test
 
       - name: Publish @surfjs/core
-        run: pnpm --filter @surfjs/core publish --no-git-checks --access public
+        run: pnpm --filter @surfjs/core publish --no-git-checks --access public || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @surfjs/client
-        run: pnpm --filter @surfjs/client publish --no-git-checks --access public
+        run: pnpm --filter @surfjs/client publish --no-git-checks --access public || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @surfjs/cli
-        run: pnpm --filter @surfjs/cli publish --no-git-checks --access public
+        run: pnpm --filter @surfjs/cli publish --no-git-checks --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @surfjs/zod
+        run: pnpm --filter @surfjs/zod publish --no-git-checks --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @surfjs/web
+        run: pnpm --filter @surfjs/web publish --no-git-checks --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @surfjs/react
+        run: pnpm --filter @surfjs/react publish --no-git-checks --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @surfjs/vue
+        run: pnpm --filter @surfjs/vue publish --no-git-checks --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @surfjs/svelte
+        run: pnpm --filter @surfjs/svelte publish --no-git-checks --access public || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @surfjs/next
+        run: pnpm --filter @surfjs/next publish --no-git-checks --access public || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @surfjs/devui
-        run: pnpm --filter @surfjs/devui publish --no-git-checks --access public
+        run: pnpm --filter @surfjs/devui publish --no-git-checks --access public || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
