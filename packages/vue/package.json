@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/vue",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Vue composables for the window.surf runtime — register local handlers, sync state, and surface Surf Live",
   "type": "module",
   "main": "./dist/index.cjs",

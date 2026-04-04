@@ -10,30 +10,61 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+---
+
+## 0.5.1 (2026-04-04)
+
+### Security
+- **Timing-safe token comparison** — bearer token verification now uses constant-time comparison without leaking token length. (#ee9645e)
+- **Bearer token scrubbed from claims** — raw token is no longer attached to the claims object after verification. (#435a9cf)
+
 ### Added
-- **`SurfClientErrorCode` union type** — typed error codes for all `SurfClientError` exceptions. Includes `TIMEOUT`, `NETWORK_ERROR`, `NOT_CONNECTED`, `INVALID_MANIFEST`, `NOT_SUPPORTED` and more. Exported from `@surfjs/client`. (#cf74ff0)
+- **Configurable CORS origin policy** — `createSurf({ cors })` now accepts a string, array, regex, or function to control allowed origins. (#214cdba)
+- **`strictParams` mode** — rejects unexpected parameters at the handler level, returning a 400 error. (#ec1ef81)
+- **Rate limiting — session start** — configurable rate limit on session creation to prevent abuse. (#61b68c3)
+- **Rate limiting — WebSocket execute** — per-connection rate limiting on WS `execute` messages. (#56a8870)
+- **`maxSessions` limit** — `InMemorySessionStore` now supports a cap with LRU eviction when the limit is reached. (#0d9decd)
+- **ResponseCache LRU eviction** — cache now uses LRU instead of FIFO for smarter eviction. (#8f0f220)
+- **`SurfClientErrorCode` union type** — typed error codes for all `SurfClientError` exceptions (`TIMEOUT`, `NETWORK_ERROR`, `NOT_CONNECTED`, `INVALID_MANIFEST`, `NOT_SUPPORTED`, etc.). Exported from `@surfjs/client`. (#cf74ff0)
 - **`SURF_ERROR_CODES` + `isSurfErrorCode()`** — exported from `@surfjs/client` for programmatic error code checks. (#60ef626)
 - **`SurfChannelControls` interface** — named return type for `useSurfChannel()` hook, exported from `@surfjs/react`. (#47dba67)
-- **Test coverage: core validators** — 40 tests for Zod edge cases (nested objects, arrays, enums, optionals, `validateResult`). (#362658a)
-- **Test coverage: middleware pipeline** — 17 tests for execution order, early returns, error propagation, double-next guard. (#362658a)
-- **Test coverage: SurfError codes** — 56 tests covering all 9 `SurfErrorCode` values and every convenience constructor. (#362658a)
-- **Test coverage: error handling paths** — 46 tests for malformed requests, handler errors, middleware semantics, HTTP transport error responses, auth paths, and serialization roundtrip. (#f936321)
-- **Test coverage: `SurfClient` advanced** — 59 tests for initialization, auth flows, retry logic, streaming, cache, sessions, pipeline, `checkForUpdates`, and typed proxy. (#fc5d9a0)
-- **Test coverage: CLI** — 57 tests for flag parsing, type coercion, header building, JSON highlighting, and all three commands (`ping`/`inspect`/`test`). (#e3bde37)
-- **CLI utility exports** — `parseArgs`, `buildHeaders`, `coerceValue`, `syntaxHighlightJson`, `ping`, `inspect`, `test` are now exported from `@surfjs/cli` for testability. (#e3bde37)
-
-### Changed
-- **TypeScript strict sweep — `@surfjs/core`** — proper `ws` peer-dep types via `import type { WebSocketServer }`; removed `any` in `surf.ts`. (#9b40532)
-- **TypeScript strict sweep — `@surfjs/client`** — eliminated two `as unknown as` double-casts; added `getFetch()` to `HttpTransport`; added `isSessionResult()` type guard; rewrote `window.ts` catch block with proper narrowing. (#60ef626)
-- **TypeScript strict sweep — adapters** — `noUncheckedIndexedAccess` added to web/svelte/vue tsconfigs; replaced unsafe casts in web/runtime.ts, vue/provider.ts, and next/shared.ts with proper type guards/helpers. (#2c84cdb)
-- **TypeScript strict sweep — CLI + React** — `noUncheckedIndexedAccess` + `forceConsistentCasingInFileNames` added; fixed all indexed-access type errors in CLI; `SurfChannelControls` named interface added for `useSurfChannel()`. (#47dba67)
-- **All raw `Error()` throws replaced** — every error that reaches the caller in `@surfjs/client` is now a `SurfClientError` with a typed code. (#cf74ff0)
-- **SPEC.md §5 updated** — added server vs client error code tables with handling examples. (#cf74ff0)
-- **`@surfjs/next` README overhauled** — middleware export docs, custom basePath, edge caveat, Pages Router, composing middleware, full API table. (#481043f)
-- **CONTRIBUTING.md updated** — all 10 packages documented, adapter guide, testing section, release process. (#481043f)
+- **CLI utility exports** — `parseArgs`, `buildHeaders`, `coerceValue`, `syntaxHighlightJson`, `ping`, `inspect`, `test` now exported from `@surfjs/cli`. (#e3bde37)
+- **ESLint + Turbo Lint** — monorepo-wide linting configuration. (#b6b1423)
+- **Performance benchmark suite** — automated benchmarks for core operations. (#cc1196c)
+- **CI workflow** — comprehensive GitHub Actions for tests, builds, and lint. (#7ddd490)
 
 ### Fixed
+- **`NOT_FOUND` → HTTP 404** — error code now correctly maps to 404 instead of 500. (#e130fc6)
+- **Pipeline body validation** — malformed pipeline request bodies are now rejected with a proper error. (#2b80483)
+- **Array param resolution** — pipeline now correctly handles array-valued parameters. (#16d2d01)
+- **RateLimiter `keyBy` default** — aligned with spec (was using wrong default key). (#6b879fd)
+- **WebSocket channel auth** — unauthenticated subscriptions now work when `channelAuth` is not configured. (#03b3bf2)
+- **`@surfjs/next` auth-aware manifest** — App Router GET handler now respects auth configuration. (#f6ac8ce)
+- **`@surfjs/next` server guard** — browser-only commands are rejected in the server handler. (#513c99b)
+- **`@surfjs/client` manifest types** — added `about`, `channels`, `checksum`, `updatedAt` to `SurfManifest`; added `hidden` auth type and execution hint to `ManifestCommand`. (#04cc9da, #342d1a1)
 - **CLI `main()` guard** — wrapped with `import.meta.url` check for ESM testability. (#e3bde37)
+- **Issues #107–#113** — async examples, Fastify empty body handling, CLI args/inspect, client docs, `registerCommand` default. (#0363c1e)
+
+### Changed
+- **TypeScript strict sweep** — eliminated `any` types across core, client, adapters, CLI, and React packages with proper type guards and interfaces. (#9b40532, #60ef626, #2c84cdb, #47dba67)
+- **All raw `Error()` replaced** — every thrown error in `@surfjs/client` is now a typed `SurfClientError`. (#cf74ff0)
+- **`deepMerge` centralized** — moved to `@surfjs/core` shared utilities. (#c044988)
+- **`getErrorStatus` centralized** — error-to-HTTP-status mapping moved to shared module. (#74e16ec)
+
+### Performance
+- **Event-driven `SurfProvider`** — replaced 500ms polling with event-driven updates in `@surfjs/web`. (#d94601b)
+
+### Docs
+- **JSDoc on all public APIs** — core, client, react, next, and zod packages. (#dd6f5ef, #75de1e0, #096c840)
+- **Security headers recipe** — middleware example for production deployments. (#5437e54)
+- **SPEC.md updated** — `about`, `requiredScopes`, `channels` fields; error code tables. (#2d633c5, #cf74ff0)
+- **README badges** — CI status, docs, and Surf-enabled self-badge. (#1c12b7b)
+- **Comprehensive CHANGELOG audit** — backfilled all missing versions 0.1.2–0.5.0. (#8eb1c16)
+- **`@surfjs/next` README overhauled** — middleware, basePath, edge caveats, Pages Router, full API table. (#481043f)
+- **Fixed async examples** — missing `await` on `createSurf()`, ecosystem packages documented. (#a3fcb55)
+
+### Tests
+- **400+ new tests** — core validators (40), middleware pipeline (17), error codes (56), error paths (46), SurfClient (59), CLI (57), `@surfjs/zod` (comprehensive), `@surfjs/next` (comprehensive), WebSocket/SSE/adapter coverage. (#362658a, #f936321, #fc5d9a0, #e3bde37, #83cd0a4, #240cbd7, #e7580dc)
 
 ---
 
