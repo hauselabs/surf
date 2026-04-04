@@ -18,10 +18,10 @@ import { Hono } from 'hono'
 import { createSurf } from '@surfjs/core'
 import { honoApp } from '@surfjs/core/hono'
 
-const surf = createSurf({ name: 'My API', commands: { ... } })
+const surf = await createSurf({ name: 'My API', commands: { ... } })
 const app = new Hono()
 
-app.route('/', honoApp(surf))
+app.route('/', await honoApp(surf))
 ```
 
 ### Cloudflare Workers / Edge
@@ -30,8 +30,8 @@ app.route('/', honoApp(surf))
 import { createSurf } from '@surfjs/core'
 import { honoMiddleware } from '@surfjs/core/hono'
 
-const surf = createSurf({ name: 'My API', commands: { ... } })
-export default { fetch: honoMiddleware(surf) }
+const surf = await createSurf({ name: 'My API', commands: { ... } })
+export default { fetch: await honoMiddleware(surf) }
 ```
 
 ## Routes

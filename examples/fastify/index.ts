@@ -16,7 +16,7 @@ const carts = new Map<string, Array<{ sku: string; name: string; price: number; 
 
 // ─── Surf setup ──────────────────────────────────────────────────────────────
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'Example Store',
   description: 'A simple store demonstrating Surf.js with Fastify',
   version: '1.0.0',

@@ -21,7 +21,7 @@ npm install @surfjs/zod zod
 ```ts
 import { createSurf } from '@surfjs/core';
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'my-store',
   commands: {
     search: {
@@ -53,7 +53,7 @@ import { z } from 'zod';
 import { createSurf } from '@surfjs/core';
 import { defineZodCommand } from '@surfjs/zod';
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'my-store',
   commands: {
     search: defineZodCommand({
@@ -110,7 +110,7 @@ const schema = z.object({
   age: z.number().int().min(0).max(150),
 });
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'my-app',
   middleware: [zodValidator(schema)],
   commands: { ... },

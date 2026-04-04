@@ -25,7 +25,7 @@ npm install @surfjs/devui
 import { createSurf } from '@surfjs/core';
 import { createDevUI } from '@surfjs/devui';
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   commands: { /* ... */ },
 });

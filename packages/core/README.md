@@ -32,6 +32,10 @@ Surf is an **open protocol** that lets websites expose structured commands for A
 | **@surfjs/core** | Server-side command registry & middleware |
 | [@surfjs/web](https://www.npmjs.com/package/@surfjs/web) | Browser runtime — `window.surf` local execution |
 | [@surfjs/react](https://www.npmjs.com/package/@surfjs/react) | React hooks — `useSurfCommands`, `SurfProvider`, `SurfBadge` |
+| [@surfjs/vue](https://www.npmjs.com/package/@surfjs/vue) | Vue composables for the `window.surf` runtime |
+| [@surfjs/svelte](https://www.npmjs.com/package/@surfjs/svelte) | Svelte utilities for the `window.surf` runtime |
+| [@surfjs/next](https://www.npmjs.com/package/@surfjs/next) | Next.js adapter — App Router + Pages Router support |
+| [@surfjs/zod](https://www.npmjs.com/package/@surfjs/zod) | Zod schema integration — define commands with Zod |
 | [@surfjs/client](https://www.npmjs.com/package/@surfjs/client) | Agent-side SDK for discovering and executing commands |
 | [@surfjs/cli](https://www.npmjs.com/package/@surfjs/cli) | CLI to inspect, test, and ping Surf endpoints |
 | [@surfjs/devui](https://www.npmjs.com/package/@surfjs/devui) | Interactive dev inspector |
@@ -53,7 +57,7 @@ import express from 'express';
 const app = express();
 app.use(express.json());
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My API',
   commands: {
     hello: {
@@ -70,7 +74,7 @@ app.listen(3000);
 
 ## API
 
-### `createSurf(config: SurfConfig): SurfInstance`
+### `createSurf(config: SurfConfig): Promise<SurfInstance>`
 
 Creates a Surf instance with all transports and middleware configured.
 
@@ -264,18 +268,30 @@ interface AuthResult {
 
 ### bearerVerifier
 
-Simple token-list verifier:
+Simple token-list verifier. Accepts **only** an array of valid token strings — not a callback function.
 
 ```ts
 import { bearerVerifier } from '@surfjs/core';
 
-const surf = createSurf({
+const surf = await createSurf({
   authVerifier: bearerVerifier(['secret-token-1', 'secret-token-2']),
   commands: {
     admin: { description: 'Admin only', auth: 'required', run: async () => {} },
   },
 });
 ```
+
+> **Custom verification logic?** Use the `authVerifier` config option directly instead of `bearerVerifier`:
+>
+> ```ts
+> const surf = await createSurf({
+>   authVerifier: async (token, command) => {
+>     const user = await verifyJWT(token);
+>     return user ? { valid: true, claims: { sub: user.id } } : { valid: false, reason: 'Invalid token' };
+>   },
+>   commands: { /* ... */ },
+> });
+> ```
 
 ### Scoped Auth
 
@@ -317,7 +333,7 @@ A token must have **all** listed `requiredScopes` to call a command. Missing sco
 Nest objects to create dot-notation command names:
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   commands: {
     cart: {
@@ -346,7 +362,7 @@ Session-aware event emitter with three scopes:
 
 ```ts
 // Define events with scope
-const surf = createSurf({
+const surf = await createSurf({
   events: {
     'order.updated': {
       description: 'Order status changed',
@@ -388,6 +404,37 @@ Mark a command with `stream: true` and use `context.emit`:
 
 ## Framework Adapters
 
+### Raw Node.js HTTP
+
+When using `surf.middleware()` with raw `http.createServer` (without Express, Hono, or Fastify), the handler reads the request body from the stream automatically. However, if another middleware has already consumed the stream, you must pre-parse the body and attach it to `req.body`:
+
+```ts
+import http from 'node:http';
+import { createSurf } from '@surfjs/core';
+
+const surf = await createSurf({
+  name: 'My API',
+  commands: { /* ... */ },
+});
+
+const handler = surf.middleware();
+
+const server = http.createServer(async (req, res) => {
+  // Option 1: Let Surf read the stream (works if nothing else consumes it)
+  handler(req, res);
+
+  // Option 2: Pre-parse if body was already consumed by other middleware
+  // const chunks: Buffer[] = [];
+  // for await (const chunk of req) chunks.push(chunk);
+  // (req as any).body = JSON.parse(Buffer.concat(chunks).toString());
+  // handler(req, res);
+});
+
+server.listen(3000);
+```
+
+> **Tip:** Frameworks like Express, Fastify, and Hono handle body parsing automatically. This is only relevant when using raw `http.createServer`.
+
 ### Fastify
 
 ```ts
@@ -417,7 +464,7 @@ Same routes as Fastify adapter.
 ## Reusable Types
 
 ```ts
-const surf = createSurf({
+const surf = await createSurf({
   types: {
     Product: {
       type: 'object',
@@ -437,6 +484,37 @@ const surf = createSurf({
   },
 });
 ```
+
+## Pagination
+
+### `paginatedResult(items, opts?)`
+
+Build a standard paginated result envelope. Takes an **items array** and an **options object** (not positional arguments):
+
+```ts
+import { paginatedResult } from '@surfjs/core';
+
+// Basic usage with cursor
+const result = paginatedResult(users.slice(0, 20), {
+  nextCursor: users.length > 20 ? lastId : null,
+  total: totalCount,
+});
+// → { items: [...], hasMore: true, nextCursor: '...', total: 42 }
+
+// Without options (single page, no pagination metadata)
+const simple = paginatedResult(allItems);
+// → { items: [...], hasMore: false }
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `nextCursor` | `string \| null` | Cursor for the next page. If non-empty string, `hasMore` defaults to `true`. |
+| `total` | `number` | Total item count (optional, included in response if provided). |
+| `hasMore` | `boolean` | Explicitly set whether more pages exist (overrides cursor-based inference). |
+
+> **Note:** The second argument is an options object, not positional params. `paginatedResult(items, cursor, total)` does **not** work.
 
 ## Validation
 

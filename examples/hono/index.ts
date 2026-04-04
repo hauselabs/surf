@@ -17,7 +17,7 @@ const carts = new Map<string, Array<{ sku: string; name: string; price: number; 
 
 // ─── Surf setup ──────────────────────────────────────────────────────────────
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'Example Store',
   description: 'A simple store demonstrating Surf.js with Hono',
   version: '1.0.0',
@@ -119,7 +119,7 @@ const surf = createSurf({
 const app = new Hono();
 
 // Mount Surf routes
-app.route('/', honoApp(surf));
+app.route('/', await honoApp(surf));
 
 // Start server
 const PORT = Number(process.env.PORT) || 3000;
