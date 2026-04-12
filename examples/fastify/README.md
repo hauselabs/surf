@@ -18,7 +18,7 @@ import Fastify from 'fastify'
 import { createSurf } from '@surfjs/core'
 import { fastifyPlugin } from '@surfjs/core/fastify'
 
-const surf = createSurf({ name: 'My API', commands: { ... } })
+const surf = await createSurf({ name: 'My API', commands: { ... } })
 const app = Fastify()
 
 app.register(fastifyPlugin(surf))

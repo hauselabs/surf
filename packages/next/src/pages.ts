@@ -55,7 +55,7 @@ function headerValue(val: string | string[] | undefined): string | undefined {
  * import { createSurf } from '@surfjs/core';
  * import { createSurfApiHandler } from '@surfjs/next/pages';
  *
- * const surf = createSurf({ name: 'my-app', commands: { ... } });
+ * const surf = await createSurf({ name: 'my-app', commands: { ... } });
  * export default createSurfApiHandler(surf);
  * ```
  *
