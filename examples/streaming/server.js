@@ -4,7 +4,8 @@ const { createSurf } = require('@surfjs/core');
 const app = express();
 app.use(express.json());
 
-const surf = createSurf({
+async function main() {
+  const surf = await createSurf({
   name: 'Streaming Example',
   description: 'Demonstrates SSE streaming with Surf.js',
   version: '1.0.0',
@@ -61,11 +62,17 @@ const surf = createSurf({
       },
     },
   },
-});
+  });
 
-app.use(surf.middleware());
+  app.use(surf.middleware());
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`🏄 Streaming server at http://localhost:${PORT}`);
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`🏄 Streaming server at http://localhost:${PORT}`);
+  });
+}
+
+main().catch((error) => {
+  console.error('Failed to start streaming example:', error);
+  process.exit(1);
 });

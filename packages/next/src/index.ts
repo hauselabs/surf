@@ -10,7 +10,7 @@
  * import { createSurf } from '@surfjs/core';
  * import { createSurfRouteHandler } from '@surfjs/next';
  *
- * const surf = createSurf({ name: 'my-app', commands: { ... } });
+ * const surf = await createSurf({ name: 'my-app', commands: { ... } });
  * export const { GET, POST } = createSurfRouteHandler(surf);
  * ```
  */
@@ -47,7 +47,7 @@ type NextRequest = Request & { nextUrl?: URL };
  * import { createSurf } from '@surfjs/core';
  * import { createSurfRouteHandler } from '@surfjs/next';
  *
- * const surf = createSurf({ name: 'my-app', commands: { ... } });
+ * const surf = await createSurf({ name: 'my-app', commands: { ... } });
  * export const { GET, POST } = createSurfRouteHandler(surf);
  * ```
  *

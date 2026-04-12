@@ -30,7 +30,7 @@ export interface DevUI {
  * import { createSurf } from '@surfjs/core';
  * import { createDevUI } from '@surfjs/devui';
  *
- * const surf = createSurf({ name: 'My App', commands: { ... } });
+ * const surf = await createSurf({ name: 'My App', commands: { ... } });
  * const devui = createDevUI(surf, { port: 4242 });
  *
  * const { url } = await devui.start();

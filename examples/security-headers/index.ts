@@ -140,7 +140,7 @@ function securityHeaders(options: SecurityHeadersOptions = {}): SurfMiddleware {
 
 // ─── Example Usage ───────────────────────────────────────────────────────────
 
-const surf = createSurf({
+const surf = await createSurf({
   name: 'Secure API',
   description: 'Example API with security headers middleware',
   version: '1.0.0',

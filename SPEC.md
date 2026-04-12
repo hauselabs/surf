@@ -596,7 +596,7 @@ A **channel** is a string identifier (e.g. `project-123`, `document-abc`) that g
 Channels are opt-in — Surf Live must be explicitly enabled in the server config:
 
 ```typescript
-const surf = createSurf({
+const surf = await createSurf({
   name: 'My App',
   commands: { /* ... */ },
   channels: {

@@ -18,7 +18,8 @@ const carts = new Map(); // sessionId → items[]
 
 // ─── Surf setup ──────────────────────────────────────────────────────────────
 
-const surf = createSurf({
+async function main() {
+  const surf = await createSurf({
   name: 'Example Store',
   description: 'A simple store demonstrating Surf.js with Express',
   version: '1.0.0',
@@ -113,15 +114,21 @@ const surf = createSurf({
       },
     },
   },
-});
+  });
 
-// Mount Surf middleware
-app.use(surf.middleware());
+  // Mount Surf middleware
+  app.use(surf.middleware());
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🏄 Store running at http://localhost:${PORT}`);
-  console.log(`   Manifest: http://localhost:${PORT}/.well-known/surf.json`);
-  console.log(`   Execute:  POST http://localhost:${PORT}/surf/execute`);
+  // Start server
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🏄 Store running at http://localhost:${PORT}`);
+    console.log(`   Manifest: http://localhost:${PORT}/.well-known/surf.json`);
+    console.log(`   Execute:  POST http://localhost:${PORT}/surf/execute`);
+  });
+}
+
+main().catch((error) => {
+  console.error('Failed to start Express example:', error);
+  process.exit(1);
 });

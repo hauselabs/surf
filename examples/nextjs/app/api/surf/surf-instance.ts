@@ -12,7 +12,7 @@ const cart: Array<{ sku: string; name: string; price: number; quantity: number }
 
 // ─── Surf instance ───────────────────────────────────────────────────────────
 
-export const surf = createSurf({
+export const surf = await createSurf({
   name: 'Next.js Store',
   description: 'Example Next.js integration with Surf.js',
   version: '1.0.0',

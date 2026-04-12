@@ -291,7 +291,7 @@ function buildHonoApp(surf: SurfInstance, Hono: HonoConstructor): HonoApp {
  * import { createSurf } from '@surfjs/core'
  * import { honoApp } from '@surfjs/core/hono'
  *
- * const surf = createSurf({ ... })
+ * const surf = await createSurf({ ... })
  * const app = new Hono()
  * app.route('/', await honoApp(surf))
  * ```
@@ -318,7 +318,7 @@ export async function honoApp(surf: SurfInstance): Promise<HonoApp> {
  * import { createSurf } from '@surfjs/core'
  * import { honoAppSync } from '@surfjs/core/hono'
  *
- * const surf = createSurf({ ... })
+ * const surf = await createSurf({ ... })
  * const app = new Hono()
  * app.route('/', honoAppSync(surf, Hono))
  * ```

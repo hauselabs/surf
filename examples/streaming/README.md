@@ -5,11 +5,14 @@ Server-Sent Events (SSE) streaming with Surf.js.
 ## Run
 
 ```bash
+cd examples/streaming
+npm install
+
 # Terminal 1 — start the server
-node server.js
+npm start
 
 # Terminal 2 — run the streaming client
-node client.js
+npm run client
 ```
 
 ## Commands

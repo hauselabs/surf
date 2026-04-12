@@ -55,7 +55,7 @@ export function isCommandDefinition(value: unknown): value is CommandDefinition 
  * @example
  * ```ts
  * // Spread with prefix:
- * const surf = createSurf({
+ * const surf = await createSurf({
  *   commands: {
  *     ...group('cart', {
  *       add: { description: 'Add to cart', run: async (p) => {} },
