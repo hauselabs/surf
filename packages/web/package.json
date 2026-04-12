@@ -1,6 +1,6 @@
 {
   "name": "@surfjs/web",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Framework-agnostic window.surf local execution runtime for Surf-enabled websites",
   "type": "module",
   "main": "./dist/index.cjs",

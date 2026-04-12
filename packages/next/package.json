@@ -1,7 +1,7 @@
 {
   "name": "@surfjs/next",
-  "version": "0.5.1",
-  "description": "Next.js adapter for Surf.js — App Router + Pages Router support",
+  "version": "0.5.2",
+  "description": "Next.js adapter for Surf.js \u2014 App Router + Pages Router support",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

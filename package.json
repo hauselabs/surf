@@ -42,5 +42,6 @@
   "homepage": "https://surf.codes",
   "bugs": {
     "url": "https://github.com/hauselabs/surf/issues"
-  }
+  },
+  "version": "0.5.2"
 }
